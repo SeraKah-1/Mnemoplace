@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation Blueprint for Memory
+    function isValidMemory(data, userId) {
+      let hasRequiredFields = data.keys().hasAll(['userId', 'content', 'category', 'status', 'createdAt', 'updatedAt']);
+      
+      let isUserIdValid = data.userId == userId;
+      let isContentValid = data.content is string && data.content.size() <= 10000;
+      let isCategoryValid = data.category is string && data.category.size() <= 100;
+      let isStatusValid = data.status in ['generating', 'completed', 'error'];
+      
+      // Optional operationName
+      let isOperationNameValid = !('operationName' in data) || (data.operationName is string && data.operationName.size() <= 200);
+      
+      return hasRequiredFields && isUserIdValid && isContentValid && isCategoryValid && isStatusValid && isOperationNameValid;
+    }
+
+    match /users/{userId} {
+      // Isolate users/userId paths for future PII, though we only define memories subcollection here.
+      allow read, write: if false;
+
+      match /memories/{memoryId} {
+        // Secure List Queries
+        allow list: if isOwner(userId);
+        
+        // Secure Get
+        allow get: if isOwner(userId) && isValidId(memoryId);
+        
+        allow create: if 
+          isOwner(userId) && 
+          isValidId(memoryId) &&
+          isValidMemory(incoming(), userId) &&
+          incoming().keys().size() >= 6 && 
+          incoming().keys().size() <= 7 && // userId, content, category, status, createdAt, updatedAt + optional operationName
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+          
+        allow update: if 
+          isOwner(userId) && 
+          isValidId(memoryId) &&
+          isValidMemory(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            // Action: Update status and operationName (e.g. from backend response)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'operationName', 'updatedAt'])) ||
+            // Action: Edit content and category (e.g. user manually edits)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['content', 'category', 'updatedAt'])) ||
+            // Action: Complete generation (status change)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+          );
+          
+        allow delete: if
+          isOwner(userId) &&
+          isValidId(memoryId);
+      }
+    }
+  }
+}

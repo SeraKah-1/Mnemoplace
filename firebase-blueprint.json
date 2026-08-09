@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Memory": {
+      "title": "Memory",
+      "description": "A piece of information stored in the mind palace.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this memory."
+        },
+        "content": {
+          "type": "string",
+          "description": "The raw information input by the user.",
+          "maxLength": 10000
+        },
+        "category": {
+          "type": "string",
+          "description": "The auto-generated category.",
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the memory generation: 'generating', 'completed', or 'error'",
+          "enum": ["generating", "completed", "error"]
+        },
+        "operationName": {
+          "type": "string",
+          "description": "The name of the video generation operation, if applicable.",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["userId", "content", "category", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/memories/{memoryId}": {
+      "schema": {
+        "$ref": "#/entities/Memory"
+      },
+      "description": "The memories stored by a specific user."
+    }
+  }
+}
