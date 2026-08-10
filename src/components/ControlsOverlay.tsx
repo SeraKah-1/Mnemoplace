@@ -213,13 +213,14 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
 
         {/* Mobile JRPG Retro Action Buttons (A / B / X / Y) */}
         <div className="flex items-center gap-2">
-          {/* Action Button A (Place Anchor) */}
+          {/* Action Button E (Place Anchor) */}
           <button
             onClick={onPlaceAnchorClick}
             className="jrpg-btn px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-pixel font-bold rounded flex items-center gap-1.5 shadow-xl active:translate-y-0.5"
+            title="Place Anchor (Hotkey: E / Space)"
           >
             <span className="w-5 h-5 bg-amber-400 text-slate-950 rounded font-mono font-bold flex items-center justify-center text-xs">
-              A
+              E
             </span>
             <span>ANCHOR</span>
           </button>

@@ -131,6 +131,28 @@ export default function App() {
     };
   }, [refreshDatabase]);
 
+  // Hotkey listener for KeyE / Space to trigger Anchor placement at player tile
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (isAnyModalOpen) return;
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+
+      if (e.code === "KeyE" || (e.code === "Space" && !e.repeat)) {
+        e.preventDefault();
+        const existing = chunkManager.getBlockAt(activeWorld?.id || "", playerPosition.tileX, playerPosition.tileY);
+        setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
+        setEditingBlock(existing || null);
+        setShowBlockModal(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [isAnyModalOpen, activeWorld, playerPosition.tileX, playerPosition.tileY]);
+
   // Debounce autosave player last known tile position to active world
   useEffect(() => {
     if (!activeWorld) return;

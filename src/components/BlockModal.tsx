@@ -5,6 +5,8 @@ import { getAllDoodles, saveDoodle } from "../domain/db";
 import { PixelEditor } from "./PixelEditor";
 import { Sparkles, Paintbrush, Trash2, Check, X, Tag, FileText } from "lucide-react";
 
+import { pixiApp } from "../engine/PixiApp";
+
 interface BlockModalProps {
   worldId: string;
   tileX: number;
@@ -42,6 +44,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
     const updated = await getAllDoodles();
     setAvailableDoodles(updated);
     setShowPixelEditor(false);
+    await pixiApp.reloadDoodlesCache();
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
