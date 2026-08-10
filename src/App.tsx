@@ -171,6 +171,18 @@ export default function App() {
       } else if (e.code === "KeyF") {
         e.preventDefault();
         setShowFolders(true);
+      } else if (e.code === "KeyM") {
+        e.preventDefault();
+        setShowMinimap((prev) => !prev);
+      } else if (e.code === "KeyJ") {
+        e.preventDefault();
+        setShowJournal(true);
+      } else if (e.code === "KeyR") {
+        e.preventDefault();
+        setShowReview(true);
+      } else if (e.code === "KeyB") {
+        e.preventDefault();
+        setBuildMode((prev) => !prev);
       }
     };
 
@@ -221,6 +233,19 @@ export default function App() {
     const updatedBlocks = await getAllBlocks();
     setBlocks(updatedBlocks);
     setShowBlockModal(false);
+  };
+
+  // Mobile delete button: same logic as Delete/X hotkey
+  const handleDeleteAtPlayer = async () => {
+    if (!activeWorld) return;
+    const deleted = await chunkManager.removeBlockAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY);
+    if (deleted) {
+      setBlocks((prev) => prev.filter((b) => !(b.worldId === activeWorld.id && b.x === playerPosition.tileX && b.y === playerPosition.tileY)));
+      await pixiApp.refreshWorld(true);
+    } else if (buildMode) {
+      await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
+      await pixiApp.refreshWorld(true);
+    }
   };
 
   const handleDeleteBlock = async (blockId: string) => {
@@ -310,6 +335,7 @@ export default function App() {
           setEditingBlock(null);
           setShowBlockModal(true);
         }}
+        onDeleteAtPlayer={handleDeleteAtPlayer}
         onVirtualDirection={(vx, vy) => {
           pixiApp.getPlayerController().setVirtualDirection(vx, vy);
         }}

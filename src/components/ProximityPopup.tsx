@@ -87,15 +87,18 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
 
   return (
     <>
-      {/* Permanent District Landmark Location Banner */}
-      <div className="fixed top-16 left-4 z-30 pointer-events-none jrpg-box px-3 py-1.5 flex items-center gap-2 animate-fade-in shadow-xl">
-        <MapPin className="w-4 h-4 text-amber-400 animate-bounce flex-shrink-0" />
-        <div>
-          <div className="text-[8px] font-pixel font-bold text-amber-300 tracking-wider">
-            {district.districtTag.toUpperCase()}
-          </div>
-          <div className="text-[10px] font-pixel text-slate-100 font-bold">
-            {district.roomName}
+      {/* Permanent District Landmark Location Banner — sits below header HUD (top-[72px]) */}
+      <div className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none" style={{ top: '60px' }}>
+        <div className="jrpg-box px-3 py-1.5 flex items-center gap-2 animate-fade-in shadow-xl">
+          <MapPin className="w-3.5 h-3.5 text-amber-400 animate-bounce flex-shrink-0" />
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] font-pixel font-bold text-amber-400 tracking-widest uppercase">
+              {district.districtTag}
+            </span>
+            <span className="text-slate-600 text-[8px]">›</span>
+            <span className="text-[9px] font-pixel text-slate-100 font-bold">
+              {district.roomName}
+            </span>
           </div>
         </div>
       </div>
@@ -107,7 +110,7 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
             top: `${screenPos.y - 70}px`,
             transform: "translate(-50%, -100%)",
           }}
-          className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
+          className="fixed z-50 pointer-events-auto cursor-pointer animate-fade-in"
           onClick={() => onOpenBlock(activeBlock)}
         >
       <div className="jrpg-box p-3.5 text-slate-100 max-w-xs flex flex-col gap-2 relative group hover:border-amber-400 transition-all">

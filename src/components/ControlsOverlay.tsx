@@ -1,5 +1,16 @@
-import React from "react";
-import { Brain, BookOpen, Map, Folder, ShieldCheck, Eye, EyeOff, Plus, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Hammer } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Brain,
+  BookOpen,
+  Map,
+  Folder,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  Hammer,
+  Trash2,
+  Plus,
+} from "lucide-react";
 import { WorldFolder } from "../domain/types";
 
 interface ControlsOverlayProps {
@@ -17,19 +28,90 @@ interface ControlsOverlayProps {
   onToggleMinimap: () => void;
   onOpenBackup: () => void;
   onPlaceAnchorClick: () => void;
+  onDeleteAtPlayer: () => void;
   onVirtualDirection: (vx: number, vy: number) => void;
 }
 
 export const TILE_BLOCK_TYPES = [
-  { id: 0, name: "Grass", icon: "🌿", color: "bg-emerald-900 border-emerald-500" },
-  { id: 1, name: "Cobble", icon: "🪨", color: "bg-slate-800 border-slate-500" },
-  { id: 2, name: "Stone", icon: "🏛️", color: "bg-indigo-900 border-indigo-500" },
-  { id: 3, name: "Rune", icon: "🔮", color: "bg-purple-950 border-purple-500" },
-  { id: 4, name: "Wood", icon: "🪵", color: "bg-amber-900 border-amber-500" },
-  { id: 5, name: "Stone Wall", icon: "🧱", color: "bg-slate-900 border-slate-400 font-bold" },
-  { id: 6, name: "Wood Fence", icon: "🪵", color: "bg-amber-950 border-amber-600 font-bold" },
-  { id: 7, name: "Obsidian Pillar", icon: "🔮", color: "bg-purple-900 border-purple-400 font-bold" },
+  { id: 0, name: "Grass",         icon: "🌿", color: "bg-emerald-900 border-emerald-500" },
+  { id: 1, name: "Cobble",        icon: "🪨", color: "bg-slate-800 border-slate-500" },
+  { id: 2, name: "Stone",         icon: "🏛️", color: "bg-indigo-900 border-indigo-500" },
+  { id: 3, name: "Rune",          icon: "🔮", color: "bg-purple-950 border-purple-500" },
+  { id: 4, name: "Wood",          icon: "🪵", color: "bg-amber-900 border-amber-500" },
+  { id: 5, name: "Stone Wall",    icon: "🧱", color: "bg-slate-900 border-slate-400 font-bold" },
+  { id: 6, name: "Wood Fence",    icon: "🪵", color: "bg-amber-950 border-amber-600 font-bold" },
+  { id: 7, name: "Obsidian Pillar",icon: "🔮", color: "bg-purple-900 border-purple-400 font-bold" },
 ];
+
+// ── Reusable D-Pad directional button ─────────────────────────────
+interface DPadBtnProps {
+  vx: number;
+  vy: number;
+  onDir: (vx: number, vy: number) => void;
+  children: React.ReactNode;
+  className?: string;
+}
+const DPadBtn: React.FC<DPadBtnProps> = ({ vx, vy, onDir, children, className = "" }) => (
+  <button
+    onMouseDown={() => onDir(vx, vy)}
+    onMouseUp={() => onDir(0, 0)}
+    onMouseLeave={() => onDir(0, 0)}
+    onTouchStart={(e) => { e.preventDefault(); onDir(vx, vy); }}
+    onTouchEnd={(e) => { e.preventDefault(); onDir(0, 0); }}
+    className={`flex items-center justify-center select-none active:scale-90 transition-transform ${className}`}
+  >
+    {children}
+  </button>
+);
+
+// ── Xbox Face Button (A/B/X/Y) ────────────────────────────────────
+interface FaceBtnProps {
+  label: string;
+  icon: React.ReactNode;
+  color: string;           // ring + text color class
+  bgColor: string;         // fill bg class
+  onClick: () => void;
+  badge?: string | number; // optional top-right badge
+  title?: string;
+}
+const FaceBtn: React.FC<FaceBtnProps> = ({ label, icon, color, bgColor, onClick, badge, title }) => (
+  <button
+    onClick={onClick}
+    title={title}
+    className={`relative w-12 h-12 rounded-full ${bgColor} border-2 ${color} flex flex-col items-center justify-center gap-0.5 shadow-lg active:scale-90 transition-transform select-none`}
+  >
+    {badge !== undefined && (
+      <span className="absolute -top-1 -right-1 bg-amber-400 text-slate-950 text-[8px] font-bold font-mono px-1 rounded-full leading-none py-0.5 min-w-[16px] text-center">
+        {badge}
+      </span>
+    )}
+    <span className="text-base leading-none">{icon}</span>
+    <span className={`text-[7px] font-pixel font-bold ${color.replace("border-", "text-")}`}>{label}</span>
+  </button>
+);
+
+// ── Bumper / Shoulder button ───────────────────────────────────────
+interface BumperBtnProps {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  title?: string;
+}
+const BumperBtn: React.FC<BumperBtnProps> = ({ label, icon, onClick, active, title }) => (
+  <button
+    onClick={onClick}
+    title={title}
+    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 font-pixel text-[9px] transition-all active:translate-y-0.5 select-none shadow-md ${
+      active
+        ? "bg-emerald-800 border-emerald-400 text-emerald-200 animate-pulse"
+        : "bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-400"
+    }`}
+  >
+    {icon}
+    <span>{label}</span>
+  </button>
+);
 
 export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   activeWorld,
@@ -46,12 +128,17 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onToggleMinimap,
   onOpenBackup,
   onPlaceAnchorClick,
+  onDeleteAtPlayer,
   onVirtualDirection,
 }) => {
+  const [showHotbar, setShowHotbar] = useState(false);
+
   return (
-    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
-      {/* Top Retro JRPG Header Bar */}
-      <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 jrpg-box p-2.5 sm:p-3 shadow-2xl">
+    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between">
+
+      {/* ── TOP HEADER HUD ─────────────────────────────────────────── */}
+      <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 jrpg-box p-2.5 mx-0 shadow-2xl">
+        {/* Logo + World */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
             <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 animate-pulse" />
@@ -60,193 +147,314 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
             </h1>
           </div>
 
-          {/* Active World Realm Selector Badge */}
           <button
             onClick={onOpenFolders}
             className="flex items-center gap-1.5 bg-slate-900 border-2 border-indigo-500/60 hover:border-amber-400 px-2.5 py-1 rounded text-[11px] font-pixel text-slate-100 transition-all active:translate-y-0.5"
           >
             <div style={{ backgroundColor: activeWorld.themeColor }} className="w-2.5 h-2.5 rounded-sm border border-white/40" />
-            <span className="font-pixel truncate max-w-[100px] sm:max-w-[140px] text-amber-300">{activeWorld.name}</span>
+            <span className="font-pixel truncate max-w-[90px] sm:max-w-[140px] text-amber-300">{activeWorld.name}</span>
             <Folder className="w-3 h-3 text-slate-400" />
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Build Mode Toggle */}
+        {/* Right cluster of mode toggles & tool buttons */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Build mode */}
           <button
             onClick={onToggleBuildMode}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
               buildMode
                 ? "bg-emerald-950 border-emerald-500 text-emerald-300 shadow-lg animate-pulse"
                 : "bg-slate-900 border-slate-700 text-slate-300 hover:border-emerald-400"
             }`}
-            title="Toggle Minecraft-style Terrain Paint/Build Mode"
+            title="Toggle Build Mode (B)"
           >
             <Hammer className="w-3.5 h-3.5 text-emerald-400" />
-            <span>BUILD MODE</span>
+            <span className="hidden sm:inline">BUILD</span>
           </button>
 
-          {/* Mode Toggle (Explore Cue vs Study Reveal) */}
+          {/* Study mode */}
           <button
             onClick={onToggleStudyMode}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
               studyMode
                 ? "bg-amber-950/80 border-amber-500 text-amber-300"
                 : "bg-indigo-950/80 border-indigo-500 text-cyan-300"
             }`}
-            title="Toggle between Cue Mode (Active Recall) and Study Mode (Full Reveal)"
+            title="Toggle Study Mode (Tab)"
           >
             {studyMode ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5 text-cyan-400" />}
-            <span className="hidden sm:inline">{studyMode ? "STUDY (REVEAL)" : "EXPLORE (CUE)"}</span>
+            <span className="hidden sm:inline">{studyMode ? "STUDY" : "EXPLORE"}</span>
           </button>
 
-          {/* FSRS Review Queue Badge */}
+          {/* SRS review */}
           <button
             onClick={onOpenReview}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
               dueCount > 0
                 ? "bg-amber-500 border-amber-300 text-slate-950 font-bold shadow-lg animate-pulse"
                 : "bg-slate-900 border-slate-700 text-slate-300 hover:border-indigo-400"
             }`}
+            title="SRS Review (R)"
           >
             <Brain className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">SRS REVIEW</span>
-            <span className="bg-slate-950 text-amber-400 px-1 py-0.2 text-[10px] font-mono font-bold rounded">
+            <span className="hidden sm:inline">SRS</span>
+            <span className="bg-slate-950 text-amber-400 px-1 text-[10px] font-mono font-bold rounded">
               {dueCount}
             </span>
           </button>
 
-          {/* Journal Search */}
+          {/* Journal */}
           <button
             onClick={onOpenJournal}
             className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-cyan-400 rounded transition-all active:translate-y-0.5"
-            title="Memory Journal & Index"
+            title="Journal (J)"
           >
             <BookOpen className="w-4 h-4" />
           </button>
 
-          {/* Backup Data */}
+          {/* Minimap */}
+          <button
+            onClick={onToggleMinimap}
+            className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-violet-400 rounded transition-all active:translate-y-0.5"
+            title="Minimap (M)"
+          >
+            <Map className="w-4 h-4" />
+          </button>
+
+          {/* Backup */}
           <button
             onClick={onOpenBackup}
             className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-emerald-400 rounded transition-all active:translate-y-0.5"
-            title="JSON Backup & Data Safety"
+            title="Backup Data"
           >
             <ShieldCheck className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Minecraft-Style Build Mode Block Hotbar Toolbar */}
+      {/* ── BUILD HOTBAR (center, appears when build mode on) ─────── */}
       {buildMode && (
-        <div className="pointer-events-auto self-center jrpg-box p-2 shadow-2xl flex items-center gap-2 animate-fade-in my-2">
-          <span className="text-[10px] font-pixel text-emerald-400 font-bold px-1">BUILD:</span>
+        <div className="pointer-events-auto self-center jrpg-box p-2 shadow-2xl flex items-center gap-1.5 animate-fade-in">
+          <span className="text-[9px] font-pixel text-emerald-400 font-bold px-1 hidden sm:block">TILE:</span>
           {TILE_BLOCK_TYPES.map((block) => (
             <button
               key={block.id}
               onClick={() => onSelectTileType(block.id)}
-              className={`px-2.5 py-1.5 rounded border-2 font-pixel text-xs flex items-center gap-1.5 transition-all active:translate-y-0.5 ${
+              className={`px-2 py-1.5 rounded border-2 font-pixel text-xs flex items-center gap-1 transition-all active:translate-y-0.5 ${
                 selectedTileType === block.id
                   ? `${block.color} text-amber-300 ring-2 ring-amber-400 font-bold scale-105`
                   : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
               }`}
+              title={`${block.name} (${block.id})`}
             >
               <span>{block.icon}</span>
-              <span className="hidden sm:inline">{block.name}</span>
+              <span className="hidden sm:inline text-[10px]">{block.name}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Bottom Bar & JRPG Mobile Virtual Controls */}
-      <div className="pointer-events-auto flex items-end justify-between gap-3 w-full">
-        {/* Mobile Virtual D-pad Controller */}
-        <div className="jrpg-box p-2 flex flex-col items-center gap-1 sm:hidden select-none">
-          <button
-            onMouseDown={() => onVirtualDirection(0, -1)}
-            onMouseUp={() => onVirtualDirection(0, 0)}
-            onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(0, -1); }}
-            onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
-            className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
-          >
-            <ArrowUp className="w-6 h-6 text-cyan-400" />
-          </button>
-          <div className="flex gap-1">
-            <button
-              onMouseDown={() => onVirtualDirection(-1, 0)}
-              onMouseUp={() => onVirtualDirection(0, 0)}
-              onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(-1, 0); }}
-              onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
-              className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
-            >
-              <ArrowLeft className="w-6 h-6 text-cyan-400" />
-            </button>
-            <div className="w-12 h-12 bg-slate-950 border-2 border-slate-800 rounded flex items-center justify-center">
-              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-ping" />
+      {/* ── BOTTOM BAR: DESKTOP CUES + MOBILE XBOX GAMEPAD ──────── */}
+      <div className="pointer-events-auto flex items-end justify-between gap-3 w-full px-3 pb-3">
+
+        {/* ───── LEFT SIDE: D-PAD ──────────────────────────────── */}
+        {/* Mobile only */}
+        <div className="sm:hidden flex flex-col items-center gap-0">
+          {/* D-Pad shell */}
+          <div className="relative w-[132px] h-[132px] flex items-center justify-center">
+            {/* D-pad cross background */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-[44px] h-[132px] bg-slate-800 border border-slate-600 rounded-sm opacity-70" />
             </div>
-            <button
-              onMouseDown={() => onVirtualDirection(1, 0)}
-              onMouseUp={() => onVirtualDirection(0, 0)}
-              onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(1, 0); }}
-              onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
-              className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-[132px] h-[44px] bg-slate-800 border border-slate-600 rounded-sm opacity-70" />
+            </div>
+
+            {/* UP */}
+            <DPadBtn vx={0} vy={-1} onDir={onVirtualDirection}
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-[44px] h-[44px] bg-slate-700 border-2 border-slate-500 rounded-t-lg hover:bg-indigo-700 active:bg-indigo-600 text-cyan-300"
             >
-              <ArrowRight className="w-6 h-6 text-cyan-400" />
-            </button>
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+            </DPadBtn>
+
+            {/* LEFT */}
+            <DPadBtn vx={-1} vy={0} onDir={onVirtualDirection}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-[44px] h-[44px] bg-slate-700 border-2 border-slate-500 rounded-l-lg hover:bg-indigo-700 active:bg-indigo-600 text-cyan-300"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 12l-8-8v5H4v6h8v5z"/></svg>
+            </DPadBtn>
+
+            {/* CENTER dot */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-6 h-6 bg-slate-900 border-2 border-slate-600 rounded-sm flex items-center justify-center">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-ping" />
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <DPadBtn vx={1} vy={0} onDir={onVirtualDirection}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-[44px] h-[44px] bg-slate-700 border-2 border-slate-500 rounded-r-lg hover:bg-indigo-700 active:bg-indigo-600 text-cyan-300"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M4 12l8 8v-5h8v-6h-8V4z"/></svg>
+            </DPadBtn>
+
+            {/* DOWN */}
+            <DPadBtn vx={0} vy={1} onDir={onVirtualDirection}
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[44px] h-[44px] bg-slate-700 border-2 border-slate-500 rounded-b-lg hover:bg-indigo-700 active:bg-indigo-600 text-cyan-300"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 20l8-8h-5V4h-6v8H4z"/></svg>
+            </DPadBtn>
           </div>
+
+          {/* LB / RB shoulder bumpers row above D-pad */}
+          <div className="flex gap-2 mb-1 -mt-1 order-first">
+            <BumperBtn label="BUILD" icon={<Hammer className="w-3 h-3" />} onClick={onToggleBuildMode} active={buildMode} title="Build Mode (B)" />
+            <BumperBtn label="STUDY" icon={studyMode ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />} onClick={onToggleStudyMode} active={studyMode} title="Study Mode (Tab)" />
+          </div>
+        </div>
+
+        {/* ───── CENTER: START / SELECT (mobile only) ───────────── */}
+        <div className="sm:hidden flex flex-col items-center gap-2 self-end mb-4">
+          {/* Show/hide hotbar toggle for build tiles */}
+          {buildMode && (
+            <button
+              onClick={() => setShowHotbar(h => !h)}
+              className="px-2 py-1 bg-slate-800 border border-slate-600 rounded-full text-[8px] font-pixel text-slate-300 active:bg-slate-700"
+            >
+              {showHotbar ? "▲ TILES" : "▼ TILES"}
+            </button>
+          )}
+
+          {/* START = Folder / Floor nav */}
           <button
-            onMouseDown={() => onVirtualDirection(0, 1)}
-            onMouseUp={() => onVirtualDirection(0, 0)}
-            onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(0, 1); }}
-            onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
-            className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
+            onClick={onOpenFolders}
+            className="px-3 py-1 bg-slate-800 border-2 border-indigo-500 text-indigo-300 rounded-full text-[9px] font-pixel active:bg-indigo-900 transition-all shadow-md"
+            title="Tower Elevator (F)"
           >
-            <ArrowDown className="w-6 h-6 text-cyan-400" />
+            ≡ FLOOR
+          </button>
+
+          {/* SELECT = Journal */}
+          <button
+            onClick={onOpenJournal}
+            className="px-3 py-1 bg-slate-800 border-2 border-cyan-600 text-cyan-300 rounded-full text-[9px] font-pixel active:bg-cyan-900 transition-all shadow-md"
+            title="Journal (J)"
+          >
+            ⊟ INDEX
           </button>
         </div>
 
-        {/* Desktop Retro Keyboard Cue Bar */}
+        {/* ───── DESKTOP KEYBOARD CUE BAR ───────────────────────── */}
         <div className="jrpg-box px-3 py-1.5 text-[10px] font-pixel text-slate-300 hidden sm:flex items-center gap-2.5">
-          <span>
-            MOVE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">WASD</kbd>
-          </span>
+          <span>MOVE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">WASD</kbd></span>
           <span className="text-slate-600">•</span>
-          <span>
-            PLACE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-cyan-300 rounded font-mono">E/SPACE</kbd>
-          </span>
+          <span>ANCHOR: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-cyan-300 rounded font-mono">E/SPC</kbd></span>
           <span className="text-slate-600">•</span>
-          <span>
-            DELETE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-rose-300 rounded font-mono">DEL/X</kbd>
-          </span>
+          <span>DELETE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-rose-300 rounded font-mono">DEL/X</kbd></span>
           <span className="text-slate-600">•</span>
-          <span>
-            ELEVATOR: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-emerald-300 rounded font-mono">F</kbd>
-          </span>
+          <span>FLOOR: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-emerald-300 rounded font-mono">F</kbd></span>
+          <span className="text-slate-600">•</span>
+          <span>MAP: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-violet-300 rounded font-mono">M</kbd></span>
+          <span className="text-slate-600">•</span>
+          <span>BUILD: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-emerald-300 rounded font-mono">B</kbd></span>
         </div>
 
-        {/* Mobile JRPG Retro Action Buttons (A / B / X / Y) */}
-        <div className="flex items-center gap-2">
-          {/* Action Button E (Place Anchor) */}
-          <button
-            onClick={onPlaceAnchorClick}
-            className="jrpg-btn px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-pixel font-bold rounded flex items-center gap-1.5 shadow-xl active:translate-y-0.5"
-            title="Place Anchor (Hotkey: E / Space)"
-          >
-            <span className="w-5 h-5 bg-amber-400 text-slate-950 rounded font-mono font-bold flex items-center justify-center text-xs">
-              E
-            </span>
-            <span>ANCHOR</span>
-          </button>
+        {/* ───── RIGHT SIDE: XBOX FACE BUTTONS ─────────────────── */}
+        <div className="sm:hidden flex flex-col items-center gap-0">
+          {/* RT / LT shoulder bumpers row above face buttons */}
+          <div className="flex gap-2 mb-1">
+            <BumperBtn label="MAP" icon={<Map className="w-3 h-3" />} onClick={onToggleMinimap} title="Minimap (M)" />
+            <BumperBtn
+              label={`SRS ${dueCount > 0 ? `(${dueCount})` : ""}`}
+              icon={<Brain className="w-3 h-3" />}
+              onClick={onOpenReview}
+              active={dueCount > 0}
+              title="SRS Review (R)"
+            />
+          </div>
 
-          {/* Minimap Toggle */}
-          <button
-            onClick={onToggleMinimap}
-            className="jrpg-btn px-2.5 py-2 sm:px-3.5 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-[11px] font-pixel rounded flex items-center gap-1.5 shadow-xl active:translate-y-0.5"
-          >
-            <Map className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">MAP</span>
-          </button>
+          {/* Face button diamond  Y
+                                 X   B
+                                   A          */}
+          <div className="relative w-[132px] h-[132px]">
+            {/* controller body pill */}
+            <div className="absolute inset-4 bg-slate-800/70 border border-slate-600 rounded-full" />
+
+            {/* Y — top: ANCHOR / PLACE */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2">
+              <FaceBtn
+                label="ANCHOR"
+                icon={<Plus className="w-4 h-4" />}
+                color="border-amber-400 text-amber-300"
+                bgColor="bg-amber-900"
+                onClick={onPlaceAnchorClick}
+                title="Place Anchor (E)"
+              />
+            </div>
+
+            {/* X — left: JOURNAL */}
+            <div className="absolute left-0 top-1/2 -translate-y-1/2">
+              <FaceBtn
+                label="JOURNAL"
+                icon={<BookOpen className="w-4 h-4" />}
+                color="border-sky-400 text-sky-300"
+                bgColor="bg-sky-900"
+                onClick={onOpenJournal}
+                title="Journal (J)"
+              />
+            </div>
+
+            {/* B — right: DELETE */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2">
+              <FaceBtn
+                label="DELETE"
+                icon={<Trash2 className="w-4 h-4" />}
+                color="border-rose-400 text-rose-300"
+                bgColor="bg-rose-900"
+                onClick={onDeleteAtPlayer}
+                title="Delete block (DEL)"
+              />
+            </div>
+
+            {/* A — bottom: BACKUP */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+              <FaceBtn
+                label="BACKUP"
+                icon={<ShieldCheck className="w-4 h-4" />}
+                color="border-emerald-400 text-emerald-300"
+                bgColor="bg-emerald-900"
+                onClick={onOpenBackup}
+                title="Backup Data"
+              />
+            </div>
+          </div>
         </div>
+
       </div>
+
+      {/* ── MOBILE BUILD HOTBAR (full-width slide up) ──────────── */}
+      {buildMode && showHotbar && (
+        <div className="sm:hidden pointer-events-auto fixed bottom-40 left-0 right-0 flex justify-center z-40">
+          <div className="jrpg-box p-2 flex items-center gap-1.5 shadow-2xl animate-fade-in overflow-x-auto max-w-full">
+            {TILE_BLOCK_TYPES.map((block) => (
+              <button
+                key={block.id}
+                onClick={() => { onSelectTileType(block.id); setShowHotbar(false); }}
+                className={`px-2.5 py-1.5 rounded border-2 font-pixel text-[10px] flex flex-col items-center gap-0.5 transition-all active:translate-y-0.5 flex-shrink-0 ${
+                  selectedTileType === block.id
+                    ? `${block.color} text-amber-300 ring-2 ring-amber-400 font-bold scale-105`
+                    : "bg-slate-900 border-slate-700 text-slate-300"
+                }`}
+              >
+                <span className="text-base">{block.icon}</span>
+                <span className="text-[8px] leading-none">{block.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
