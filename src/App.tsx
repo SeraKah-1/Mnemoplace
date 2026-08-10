@@ -157,19 +157,16 @@ export default function App() {
           setEditingBlock(existing || null);
           setShowBlockModal(true);
         }
-      } else if (e.code === "Delete" || e.code === "Backspace" || e.code === "KeyX") {
+      } else if (
+        e.code === "Delete" ||
+        e.key === "Delete" ||
+        e.code === "Backspace" ||
+        e.key === "Backspace" ||
+        e.code === "KeyX" ||
+        (e.key && e.key.toLowerCase() === "x")
+      ) {
         e.preventDefault();
-        if (activeWorld) {
-          const deleted = await chunkManager.removeBlockAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY);
-          if (deleted) {
-            setBlocks((prev) => prev.filter((b) => !(b.worldId === activeWorld.id && b.x === playerPosition.tileX && b.y === playerPosition.tileY)));
-            await pixiApp.refreshWorld(true);
-          } else if (buildModeRef.current) {
-            // Reset tile to grass baseline
-            await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
-            await pixiApp.refreshWorld(true);
-          }
-        }
+        await handleDeleteSmart();
       } else if (e.code === "KeyF") {
         e.preventDefault();
         setShowFolders(true);
@@ -237,15 +234,38 @@ export default function App() {
     setShowBlockModal(false);
   };
 
-  // Mobile delete button: same logic as Delete/X hotkey
-  const handleDeleteAtPlayer = async () => {
-    if (!activeWorld) return;
-    const deleted = await chunkManager.removeBlockAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY);
-    if (deleted) {
-      setBlocks((prev) => prev.filter((b) => !(b.worldId === activeWorld.id && b.x === playerPosition.tileX && b.y === playerPosition.tileY)));
+  // Smart delete handler (works for exact player tile or active proximity block)
+  const handleDeleteSmart = async () => {
+    const curWorld = activeWorldRef.current || activeWorld;
+    if (!curWorld) return;
+
+    // 1. Check exact player tile first
+    let targetBlock = chunkManager.getBlockAt(curWorld.id, playerPosition.tileX, playerPosition.tileY);
+
+    // 2. If no block directly under player, check for closest block within proximity (<= 2.5 tiles)
+    if (!targetBlock) {
+      let minDistance = Infinity;
+      for (const b of blocks) {
+        if (b.worldId !== curWorld.id) continue;
+        const dx = b.x - playerPosition.tileX;
+        const dy = b.y - playerPosition.tileY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= 2.5 && dist < minDistance) {
+          minDistance = dist;
+          targetBlock = b;
+        }
+      }
+    }
+
+    if (targetBlock) {
+      await chunkManager.removeBlockById(targetBlock.id);
+      await pixiApp.reloadDoodlesCache();
       await pixiApp.refreshWorld(true);
-    } else if (buildMode) {
-      await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
+      const updated = await getAllBlocks();
+      setBlocks(updated);
+    } else if (buildModeRef.current || buildMode) {
+      // Build mode: reset tile at player position to baseline grass (0)
+      await chunkManager.setTileAt(curWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
       await pixiApp.refreshWorld(true);
     }
   };
@@ -338,7 +358,7 @@ export default function App() {
           setEditingBlock(null);
           setShowBlockModal(true);
         }}
-        onDeleteAtPlayer={handleDeleteAtPlayer}
+        onDeleteAtPlayer={handleDeleteSmart}
         onVirtualDirection={(vx, vy) => {
           pixiApp.getPlayerController().setVirtualDirection(vx, vy);
         }}
