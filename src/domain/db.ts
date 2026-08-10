@@ -72,18 +72,46 @@ export async function getAllWorlds(): Promise<WorldFolder[]> {
   const db = await getDB();
   const worlds = await db.getAll("worlds");
   if (worlds.length === 0) {
-    const defaultWorld: WorldFolder = {
-      id: "world_default",
-      name: "Main Memory Palace",
-      themeColor: "#6366f1",
-      spawnX: 0,
-      spawnY: 0,
-      description: "Your primary spatial memory realm",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await db.put("worlds", defaultWorld);
-    return [defaultWorld];
+    const defaultWorlds: WorldFolder[] = [
+      {
+        id: "world_default",
+        name: "Floor 1: Main Courtyard",
+        floorNumber: 1,
+        themeColor: "#6366f1",
+        spawnX: 0,
+        spawnY: 0,
+        description: "Ground Level: Core spatial memory palace",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: "world_floor_2",
+        name: "Floor 2: Arcane Library",
+        floorNumber: 2,
+        themeColor: "#06b6d4",
+        spawnX: 0,
+        spawnY: 0,
+        description: "Second Level: Languages, terms, and books",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: "world_floor_3",
+        name: "Floor 3: Science Spire",
+        floorNumber: 3,
+        themeColor: "#10b981",
+        spawnX: 0,
+        spawnY: 0,
+        description: "Third Level: STEM, biotech, and formulas",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ];
+
+    for (const w of defaultWorlds) {
+      await db.put("worlds", w);
+    }
+    return defaultWorlds;
   }
   return worlds;
 }

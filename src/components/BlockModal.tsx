@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MemoryBlock, PixelDoodle } from "../domain/types";
 import { createNewSRSCard } from "../domain/fsrs";
-import { getAllDoodles, saveDoodle } from "../domain/db";
+import { getAllDoodles, saveDoodle, getAllBlocks } from "../domain/db";
 import { PixelEditor } from "./PixelEditor";
 import { Sparkles, Paintbrush, Trash2, Check, X, Tag, FileText } from "lucide-react";
 
@@ -35,14 +35,28 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   const [showPixelEditor, setShowPixelEditor] = useState(false);
 
   useEffect(() => {
-    getAllDoodles().then(setAvailableDoodles);
-  }, []);
+    Promise.all([getAllDoodles(), getAllBlocks()]).then(([allDoodles, allBlocks]) => {
+      // Filter out doodle IDs used by OTHER memory blocks
+      const usedDoodleIds = new Set(
+        allBlocks
+          .filter((b) => b.id !== existingBlock?.id && b.doodleId)
+          .map((b) => b.doodleId!)
+      );
+      const uniqueAvailable = allDoodles.filter((d) => !usedDoodleIds.has(d.id));
+      setAvailableDoodles(uniqueAvailable);
+    });
+  }, [existingBlock]);
 
   const handleSaveDoodleFromEditor = async (newDoodle: PixelDoodle) => {
     await saveDoodle(newDoodle);
     setSelectedDoodleId(newDoodle.id);
-    const updated = await getAllDoodles();
-    setAvailableDoodles(updated);
+    const [updatedDoodles, updatedBlocks] = await Promise.all([getAllDoodles(), getAllBlocks()]);
+    const usedDoodleIds = new Set(
+      updatedBlocks
+        .filter((b) => b.id !== existingBlock?.id && b.doodleId)
+        .map((b) => b.doodleId!)
+    );
+    setAvailableDoodles(updatedDoodles.filter((d) => !usedDoodleIds.has(d.id)));
     setShowPixelEditor(false);
     await pixiApp.reloadDoodlesCache();
   };

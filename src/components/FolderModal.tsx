@@ -69,19 +69,20 @@ export const FolderModal: React.FC<FolderModalProps> = ({
           <div className="flex items-center gap-2">
             <Folder className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">MEMORY WORLD REALMS</h2>
-              <p className="text-[10px] font-pixel text-slate-400 mt-0.5">Separate topics into distinct spatial realms</p>
+              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">TOWER ELEVATOR & REALM FLOORS</h2>
+              <p className="text-[10px] font-pixel text-slate-400 mt-0.5">Ascend/Descend between distinct tower floors</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800">
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* List of Worlds */}
+        {/* List of Tower Floors */}
         <div className="space-y-2.5 max-h-60 overflow-y-auto">
-          {worlds.map((w) => {
+          {worlds.map((w, idx) => {
             const isActive = w.id === activeWorldId;
+            const floorNum = w.floorNumber || idx + 1;
             return (
               <div
                 key={w.id}
@@ -89,27 +90,26 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                   onSelectWorld(w.id);
                   onClose();
                 }}
-                className={`p-3.5 rounded-xl border flex justify-between items-center cursor-pointer transition-all ${
+                className={`p-3 rounded border-2 flex justify-between items-center cursor-pointer transition-all ${
                   isActive
-                    ? "bg-indigo-950/60 border-indigo-500 shadow-lg ring-1 ring-indigo-500/40"
-                    : "bg-zinc-950 border-zinc-800 hover:border-zinc-700"
+                    ? "bg-indigo-950 border-amber-400 shadow-lg"
+                    : "bg-slate-950 border-slate-800 hover:border-indigo-500"
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    style={{ backgroundColor: w.themeColor }}
-                    className="w-4 h-4 rounded-full border border-white/20 shadow-sm flex-shrink-0"
-                  />
+                  <div className="w-7 h-7 bg-slate-900 border border-slate-700 rounded font-pixel text-amber-300 text-xs font-bold flex items-center justify-center">
+                    F{floorNum}
+                  </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-xs font-pixel font-bold text-white flex items-center gap-2">
                       {w.name}
                       {isActive && (
-                        <span className="text-[9px] bg-indigo-600 text-white px-2 py-0.2 rounded-full font-semibold">
-                          Active
+                        <span className="text-[9px] font-pixel bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-bold">
+                          CURRENT FLOOR
                         </span>
                       )}
                     </h3>
-                    {w.description && <p className="text-xs text-zinc-400 mt-0.5">{w.description}</p>}
+                    {w.description && <p className="text-[10px] font-pixel text-slate-400 mt-0.5">{w.description}</p>}
                   </div>
                 </div>
 
@@ -117,8 +117,8 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                   {worlds.length > 1 && (
                     <button
                       onClick={() => handleDelete(w.id)}
-                      className="text-zinc-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-zinc-900"
-                      title="Delete World"
+                      className="text-slate-500 hover:text-rose-400 p-1 rounded hover:bg-slate-900"
+                      title="Delete Tower Floor"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

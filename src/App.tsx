@@ -131,9 +131,9 @@ export default function App() {
     };
   }, [refreshDatabase]);
 
-  // Hotkey listener for KeyE / Space to trigger Anchor placement at player tile
+  // Global Hotkey listeners (E/Space = Place, Delete/X = Delete, F = Elevator)
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    const handleGlobalKeyDown = async (e: KeyboardEvent) => {
       if (isAnyModalOpen) return;
       const target = e.target as HTMLElement;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
@@ -146,6 +146,22 @@ export default function App() {
         setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
         setEditingBlock(existing || null);
         setShowBlockModal(true);
+      } else if (e.code === "Delete" || e.code === "Backspace" || e.code === "KeyX") {
+        e.preventDefault();
+        if (activeWorld) {
+          const deleted = await chunkManager.removeBlockAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY);
+          if (deleted) {
+            setBlocks((prev) => prev.filter((b) => !(b.worldId === activeWorld.id && b.x === playerPosition.tileX && b.y === playerPosition.tileY)));
+            await pixiApp.refreshWorld(true);
+          } else if (buildModeRef.current) {
+            // Reset tile to grass baseline
+            await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
+            await pixiApp.refreshWorld(true);
+          }
+        }
+      } else if (e.code === "KeyF") {
+        e.preventDefault();
+        setShowFolders(true);
       }
     };
 

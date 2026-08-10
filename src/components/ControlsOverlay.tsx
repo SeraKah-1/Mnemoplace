@@ -202,13 +202,22 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
         </div>
 
         {/* Desktop Retro Keyboard Cue Bar */}
-        <div className="jrpg-box px-3 py-1.5 text-[11px] font-pixel text-slate-300 hidden sm:flex items-center gap-3">
+        <div className="jrpg-box px-3 py-1.5 text-[10px] font-pixel text-slate-300 hidden sm:flex items-center gap-2.5">
           <span>
-            MOVE: <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">WASD</kbd> /{" "}
-            <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">ARROWS</kbd>
+            MOVE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">WASD</kbd>
           </span>
           <span className="text-slate-600">•</span>
-          <span>{buildMode ? "CLICK TILE TO BUILD/PAINT BLOCK" : "TAP TILE TO PLACE MEMORY ANCHOR"}</span>
+          <span>
+            PLACE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-cyan-300 rounded font-mono">E/SPACE</kbd>
+          </span>
+          <span className="text-slate-600">•</span>
+          <span>
+            DELETE: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-rose-300 rounded font-mono">DEL/X</kbd>
+          </span>
+          <span className="text-slate-600">•</span>
+          <span>
+            ELEVATOR: <kbd className="px-1 py-0.5 bg-slate-900 border border-slate-700 text-emerald-300 rounded font-mono">F</kbd>
+          </span>
         </div>
 
         {/* Mobile JRPG Retro Action Buttons (A / B / X / Y) */}
