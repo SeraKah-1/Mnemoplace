@@ -12,6 +12,7 @@ import { ReviewModal } from "./components/ReviewModal";
 import { FolderModal } from "./components/FolderModal";
 import { BackupModal } from "./components/BackupModal";
 import { ControlsOverlay } from "./components/ControlsOverlay";
+import { AuthModal } from "./components/AuthModal";
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -44,6 +45,7 @@ export default function App() {
   const [showReview, setShowReview] = useState<boolean>(false);
   const [showFolders, setShowFolders] = useState<boolean>(false);
   const [showBackup, setShowBackup] = useState<boolean>(false);
+  const [showSync, setShowSync] = useState<boolean>(false);
 
   // Refs for current state inside event callbacks
   const buildModeRef = useRef(buildMode);
@@ -57,7 +59,7 @@ export default function App() {
   }, [buildMode, selectedTileType, activeWorld]);
 
   // Modal click isolation
-  const isAnyModalOpen = showBlockModal || showJournal || showReview || showFolders || showBackup;
+  const isAnyModalOpen = showBlockModal || showJournal || showReview || showFolders || showBackup || showSync;
   useEffect(() => {
     pixiApp.setInputEnabled(!isAnyModalOpen);
   }, [isAnyModalOpen]);
@@ -330,6 +332,7 @@ export default function App() {
         onOpenReview={() => setShowReview(true)}
         onToggleMinimap={() => setShowMinimap((prev) => !prev)}
         onOpenBackup={() => setShowBackup(true)}
+        onOpenSync={() => setShowSync(true)}
         onPlaceAnchorClick={() => {
           setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
           setEditingBlock(null);
@@ -390,6 +393,13 @@ export default function App() {
         <BackupModal
           onDatabaseImported={refreshDatabase}
           onClose={() => setShowBackup(false)}
+        />
+      )}
+
+      {showSync && (
+        <AuthModal
+          onClose={() => setShowSync(false)}
+          onSyncComplete={refreshDatabase}
         />
       )}
         </>

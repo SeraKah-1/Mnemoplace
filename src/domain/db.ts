@@ -172,7 +172,12 @@ export async function saveChunksBatch(chunks: ChunkData[]): Promise<void> {
   await tx.done;
 }
 
-// ─── Block Operations ───
+export async function getAllChunks(): Promise<ChunkData[]> {
+  const db = await getDB();
+  return db.getAll("chunks");
+}
+
+
 export async function getAllBlocks(worldId?: string): Promise<MemoryBlock[]> {
   const db = await getDB();
   if (worldId) {
