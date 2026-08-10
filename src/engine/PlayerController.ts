@@ -18,16 +18,30 @@ export class PlayerController {
   private virtualVector = { x: 0, y: 0 };
   private onPositionChange?: (pos: PlayerPosition) => void;
 
+  private handleBlurBound = () => {
+    this.keysPressed.clear();
+  };
+
+  private handleVisibilityBound = () => {
+    if (document.hidden) this.keysPressed.clear();
+  };
+
   constructor(initialTileX = 0, initialTileY = 0) {
     this.setPosition(initialTileX * TILE_SIZE + TILE_SIZE / 2, initialTileY * TILE_SIZE + TILE_SIZE / 2);
 
     // Clear stuck keys when window loses focus or tab hides
     if (typeof window !== "undefined") {
-      window.addEventListener("blur", () => this.keysPressed.clear());
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) this.keysPressed.clear();
-      });
+      window.addEventListener("blur", this.handleBlurBound);
+      document.addEventListener("visibilitychange", this.handleVisibilityBound);
     }
+  }
+
+  public destroy() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("blur", this.handleBlurBound);
+      document.removeEventListener("visibilitychange", this.handleVisibilityBound);
+    }
+    this.keysPressed.clear();
   }
 
   public setPosition(pxX: number, pxY: number) {

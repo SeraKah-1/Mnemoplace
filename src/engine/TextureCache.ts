@@ -19,12 +19,6 @@ function setCachedTexture(key: string, texture: Texture): Texture {
   } else if (textureCache.size >= MAX_TEXTURE_CACHE_SIZE) {
     const oldestKey = textureCache.keys().next().value;
     if (oldestKey) {
-      const oldTex = textureCache.get(oldestKey);
-      if (oldTex) {
-        try {
-          oldTex.destroy(true);
-        } catch (_) {}
-      }
       textureCache.delete(oldestKey);
     }
   }

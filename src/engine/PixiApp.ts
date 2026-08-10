@@ -22,9 +22,11 @@ export class PixiApp {
   private onTileClick?: (tileX: number, tileY: number, existingBlock?: MemoryBlock) => void;
   private onPlayerMove?: (pos: PlayerPosition) => void;
   private isInitialized = false;
+  private isDisposed = false;
 
   public async init(containerElement: HTMLDivElement): Promise<void> {
     if (this.isInitialized && this.app) return;
+    this.isDisposed = false;
 
     const app = new Application();
     await app.init({
@@ -36,7 +38,7 @@ export class PixiApp {
     });
 
     // If destroyed while init promise was resolving, cleanup and abort
-    if (this.isInitialized || !containerElement) {
+    if (this.isDisposed || !containerElement) {
       try {
         app.destroy(true);
       } catch (_) {}
@@ -162,7 +164,11 @@ export class PixiApp {
   }
 
   private renderChunks() {
-    this.tileLayer.removeChildren();
+    if (!this.tileLayer) return;
+    const tileChildren = this.tileLayer.removeChildren();
+    for (const child of tileChildren) {
+      child.destroy({ children: true, texture: false });
+    }
 
     const loadedChunks = chunkManager.getLoadedChunks();
     for (const chunk of loadedChunks) {
@@ -188,7 +194,11 @@ export class PixiApp {
   }
 
   private renderBlocks(blocks: MemoryBlock[]) {
-    this.blockLayer.removeChildren();
+    if (!this.blockLayer) return;
+    const blockChildren = this.blockLayer.removeChildren();
+    for (const child of blockChildren) {
+      child.destroy({ children: true, texture: false });
+    }
 
     for (const b of blocks) {
       const pxX = tileToWorldPx(b.x);
@@ -334,6 +344,7 @@ export class PixiApp {
   }
 
   public destroy() {
+    this.isDisposed = true;
     window.removeEventListener("keydown", this.handleKeyDownBound);
     window.removeEventListener("keyup", this.handleKeyUpBound);
 

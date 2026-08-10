@@ -1,5 +1,5 @@
 import { ChunkData, MemoryBlock } from "../domain/types";
-import { getChunk, saveChunk, getAllBlocks, saveBlock, deleteBlock } from "../domain/db";
+import { getChunk, saveChunk, getAllBlocks, getBlockById, saveBlock, deleteBlock } from "../domain/db";
 import { CHUNK_SIZE, CHUNK_ACTIVE_RADIUS, tileToChunkCoord, getChunkKey } from "./constants";
 
 export class ChunkManager {
@@ -84,14 +84,16 @@ export class ChunkManager {
       }
     }
 
-    const allWorldBlocks = await getAllBlocks(worldId);
     this.activeBlocks.clear();
-    for (const b of allWorldBlocks) {
-      if (activeBlockIds.has(b.id)) {
-        const blockKey = `${b.worldId}:${b.x},${b.y}`;
-        this.activeBlocks.set(blockKey, b);
-      }
-    }
+    await Promise.all(
+      Array.from(activeBlockIds).map(async (id) => {
+        const b = await getBlockById(id);
+        if (b) {
+          const blockKey = `${b.worldId}:${b.x},${b.y}`;
+          this.activeBlocks.set(blockKey, b);
+        }
+      })
+    );
 
     console.log(`[ChunkManager] Loaded ${this.activeChunks.size} active chunks, ${this.activeBlocks.size} active blocks for ${worldId}`);
 
@@ -121,15 +123,24 @@ export class ChunkManager {
     // Update chunk reference
     const cx = tileToChunkCoord(block.x);
     const cy = tileToChunkCoord(block.y);
-    const chunkKey = getChunkKey(block.worldId, cx, cy);
-    let chunk = this.activeChunks.get(chunkKey);
-    if (!chunk) {
-      chunk = await getChunk(chunkKey);
-    }
-    if (chunk) {
-      if (!chunk.blockIds.includes(block.id)) {
-        chunk.blockIds.push(block.id);
+    const targetChunkKey = getChunkKey(block.worldId, cx, cy);
+
+    // Prune block ID from former chunks if block moved position
+    for (const [key, chunk] of this.activeChunks.entries()) {
+      if (key !== targetChunkKey && chunk.blockIds.includes(block.id)) {
+        chunk.blockIds = chunk.blockIds.filter((id) => id !== block.id);
         await saveChunk(chunk);
+      }
+    }
+
+    let targetChunk = this.activeChunks.get(targetChunkKey);
+    if (!targetChunk) {
+      targetChunk = await getChunk(targetChunkKey);
+    }
+    if (targetChunk) {
+      if (!targetChunk.blockIds.includes(block.id)) {
+        targetChunk.blockIds.push(block.id);
+        await saveChunk(targetChunk);
       }
     }
   }

@@ -96,23 +96,25 @@ export async function saveWorld(world: WorldFolder): Promise<void> {
 
 export async function deleteWorld(worldId: string): Promise<void> {
   const db = await getDB();
+
+  // Read target keys outside transaction to prevent transaction auto-commit timeouts
+  const allChunkKeys = await db.getAllKeys("chunks");
+  const targetChunkKeys = allChunkKeys.filter(
+    (k) => typeof k === "string" && k.startsWith(`${worldId}:`)
+  );
+  const blocksInWorld = await db.getAllFromIndex("blocks", "worldId", worldId);
+
   const tx = db.transaction(["worlds", "chunks", "blocks"], "readwrite");
-  await tx.objectStore("worlds").delete(worldId);
-
-  // Delete all chunks for this world
+  const worldStore = tx.objectStore("worlds");
   const chunkStore = tx.objectStore("chunks");
-  const allChunkKeys = await chunkStore.getAllKeys();
-  for (const key of allChunkKeys) {
-    if (typeof key === "string" && key.startsWith(`${worldId}:`)) {
-      await chunkStore.delete(key);
-    }
-  }
+  const blockStore = tx.objectStore("blocks");
 
-  // Delete all blocks for this world
-  const blockIndex = tx.objectStore("blocks").index("worldId");
-  const blocks = await blockIndex.getAll(worldId);
-  for (const block of blocks) {
-    await tx.objectStore("blocks").delete(block.id);
+  worldStore.delete(worldId);
+  for (const key of targetChunkKeys) {
+    chunkStore.delete(key);
+  }
+  for (const block of blocksInWorld) {
+    blockStore.delete(block.id);
   }
 
   await tx.done;
@@ -249,16 +251,22 @@ export async function importFullDatabase(backup: DatabaseBackup): Promise<void> 
   const db = await getDB();
   const tx = db.transaction(["meta", "worlds", "chunks", "blocks", "doodles"], "readwrite");
 
-  await tx.objectStore("meta").clear();
-  await tx.objectStore("worlds").clear();
-  await tx.objectStore("chunks").clear();
-  await tx.objectStore("blocks").clear();
-  await tx.objectStore("doodles").clear();
+  const metaStore = tx.objectStore("meta");
+  const worldsStore = tx.objectStore("worlds");
+  const chunksStore = tx.objectStore("chunks");
+  const blocksStore = tx.objectStore("blocks");
+  const doodlesStore = tx.objectStore("doodles");
 
-  await tx.objectStore("meta").put(backup.meta, "app_meta");
+  metaStore.clear();
+  worldsStore.clear();
+  chunksStore.clear();
+  blocksStore.clear();
+  doodlesStore.clear();
+
+  metaStore.put(backup.meta, "app_meta");
 
   for (const w of backup.worlds) {
-    await tx.objectStore("worlds").put(w);
+    worldsStore.put(w);
   }
 
   for (const c of backup.chunks) {
@@ -277,11 +285,11 @@ export async function importFullDatabase(backup: DatabaseBackup): Promise<void> 
       ...c,
       tiles: tilesArray,
     };
-    await tx.objectStore("chunks").put(chunkData);
+    chunksStore.put(chunkData);
   }
 
   for (const b of backup.blocks) {
-    await tx.objectStore("blocks").put(b);
+    blocksStore.put(b);
   }
 
   for (const d of backup.doodles) {
@@ -294,7 +302,7 @@ export async function importFullDatabase(backup: DatabaseBackup): Promise<void> 
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
     };
-    await tx.objectStore("doodles").put(pixelDoodle);
+    doodlesStore.put(pixelDoodle);
   }
 
   await tx.done;
