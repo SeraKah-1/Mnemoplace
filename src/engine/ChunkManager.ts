@@ -94,6 +94,8 @@ export class ChunkManager {
       }
     }
 
+    console.log(`[ChunkManager] Loaded ${this.activeChunks.size} active chunks, ${this.activeBlocks.size} active blocks for ${worldId}`);
+
     return {
       loadedChunkKeys,
       blocks: Array.from(this.activeBlocks.values()),
