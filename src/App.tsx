@@ -32,6 +32,9 @@ export default function App() {
 
   // UI State & Modals
   const [studyMode, setStudyMode] = useState<boolean>(false); // false = Explore (Cue), true = Study (Reveal)
+  const [buildMode, setBuildMode] = useState<boolean>(false); // Minecraft-style Block Building Mode
+  const [selectedTileType, setSelectedTileType] = useState<number>(1); // Default Cobblestone
+
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [modalTargetTile, setModalTargetTile] = useState<{ x: number; y: number } | null>(null);
   const [editingBlock, setEditingBlock] = useState<MemoryBlock | null>(null);
@@ -41,6 +44,23 @@ export default function App() {
   const [showReview, setShowReview] = useState<boolean>(false);
   const [showFolders, setShowFolders] = useState<boolean>(false);
   const [showBackup, setShowBackup] = useState<boolean>(false);
+
+  // Refs for current state inside event callbacks
+  const buildModeRef = useRef(buildMode);
+  const selectedTileTypeRef = useRef(selectedTileType);
+  const activeWorldRef = useRef(activeWorld);
+
+  useEffect(() => {
+    buildModeRef.current = buildMode;
+    selectedTileTypeRef.current = selectedTileType;
+    activeWorldRef.current = activeWorld;
+  }, [buildMode, selectedTileType, activeWorld]);
+
+  // Modal click isolation
+  const isAnyModalOpen = showBlockModal || showJournal || showReview || showFolders || showBackup;
+  useEffect(() => {
+    pixiApp.setInputEnabled(!isAnyModalOpen);
+  }, [isAnyModalOpen]);
 
   // Load Database Initialization
   const refreshDatabase = useCallback(async () => {
@@ -85,10 +105,17 @@ export default function App() {
         }
       });
 
-      pixiApp.setOnTileClick((tileX, tileY, existingBlock) => {
-        setModalTargetTile({ x: tileX, y: tileY });
-        setEditingBlock(existingBlock || null);
-        setShowBlockModal(true);
+      pixiApp.setOnTileClick(async (tileX, tileY, existingBlock) => {
+        if (buildModeRef.current) {
+          if (activeWorldRef.current) {
+            await chunkManager.setTileAt(activeWorldRef.current.id, tileX, tileY, selectedTileTypeRef.current);
+            await pixiApp.refreshWorld(true);
+          }
+        } else {
+          setModalTargetTile({ x: tileX, y: tileY });
+          setEditingBlock(existingBlock || null);
+          setShowBlockModal(true);
+        }
       });
 
       refreshDatabase();
@@ -219,6 +246,10 @@ export default function App() {
         activeWorld={activeWorld}
         dueCount={dueBlocksCount}
         studyMode={studyMode}
+        buildMode={buildMode}
+        selectedTileType={selectedTileType}
+        onToggleBuildMode={() => setBuildMode((prev) => !prev)}
+        onSelectTileType={(t) => setSelectedTileType(t)}
         onToggleStudyMode={() => setStudyMode((prev) => !prev)}
         onOpenFolders={() => setShowFolders(true)}
         onOpenJournal={() => setShowJournal(true)}

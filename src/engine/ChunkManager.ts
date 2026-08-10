@@ -47,9 +47,8 @@ export class ChunkManager {
         if (!this.activeChunks.has(key)) {
           let chunk = await getChunk(key);
           if (!chunk) {
-            // Generate sparse empty chunk in memory (do not write empty grass chunks to DB)
-            const tiles = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
-            tiles.fill(0);
+            // Generate procedural terrain chunk in memory
+            const tiles = this.generateProceduralTerrain(cx, cy);
 
             chunk = {
               key,
@@ -176,6 +175,66 @@ export class ChunkManager {
     }
 
     return true;
+  }
+
+  public async setTileAt(worldId: string, tileX: number, tileY: number, tileType: number): Promise<void> {
+    const cx = tileToChunkCoord(tileX);
+    const cy = tileToChunkCoord(tileY);
+    const chunkKey = getChunkKey(worldId, cx, cy);
+    let chunk = this.activeChunks.get(chunkKey);
+    if (!chunk) {
+      chunk = await getChunk(chunkKey);
+      if (!chunk) {
+        chunk = {
+          key: chunkKey,
+          worldId,
+          cx,
+          cy,
+          tiles: this.generateProceduralTerrain(cx, cy),
+          blockIds: [],
+          updatedAt: Date.now(),
+        };
+      }
+      this.activeChunks.set(chunkKey, chunk);
+    }
+
+    const localX = ((tileX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const localY = ((tileY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const tileIdx = localY * CHUNK_SIZE + localX;
+
+    chunk.tiles[tileIdx] = tileType;
+    chunk.updatedAt = Date.now();
+    await saveChunk(chunk);
+  }
+
+  private generateProceduralTerrain(cx: number, cy: number): Uint16Array {
+    const tiles = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
+    for (let localY = 0; localY < CHUNK_SIZE; localY++) {
+      for (let localX = 0; localX < CHUNK_SIZE; localX++) {
+        const globalX = cx * CHUNK_SIZE + localX;
+        const globalY = cy * CHUNK_SIZE + localY;
+        const tileIdx = localY * CHUNK_SIZE + localX;
+
+        // Cobblestone Main Roads at 16-tile intervals
+        if (Math.abs(globalX) % 16 === 0 || Math.abs(globalY) % 16 === 0) {
+          tiles[tileIdx] = 1; // Cobblestone Path
+        } else {
+          const hash = Math.sin(globalX * 12.9898 + globalY * 78.233) * 43758.5453;
+          const val = hash - Math.floor(hash);
+
+          if (val > 0.88) {
+            tiles[tileIdx] = 4; // Wood Deck Planks
+          } else if (val > 0.76) {
+            tiles[tileIdx] = 2; // Dungeon Stone Floor
+          } else if (val > 0.72) {
+            tiles[tileIdx] = 3; // Memory Portal Rune
+          } else {
+            tiles[tileIdx] = 0; // Baseline Grass
+          }
+        }
+      }
+    }
+    return tiles;
   }
 
   public async flushDirtyChunks(): Promise<void> {

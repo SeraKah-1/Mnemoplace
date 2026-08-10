@@ -220,17 +220,27 @@ export class PixiApp {
     }
   }
 
+  private inputEnabled: boolean = true;
+
+  public setInputEnabled(enabled: boolean) {
+    this.inputEnabled = enabled;
+  }
+
   private handleKeyDownBound = (e: KeyboardEvent) => {
+    if (!this.inputEnabled) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     this.playerController.handleKeyDown(e.code);
   };
 
   private handleKeyUpBound = (e: KeyboardEvent) => {
+    if (!this.inputEnabled) return;
     this.playerController.handleKeyUp(e.code);
   };
 
   private handleCanvasClickBound = (e: MouseEvent) => {
-    if (!this.app?.canvas) return;
+    if (!this.inputEnabled || !this.app?.canvas) return;
+    if (e.target !== this.app.canvas) return;
+
     const rect = this.app.canvas.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
