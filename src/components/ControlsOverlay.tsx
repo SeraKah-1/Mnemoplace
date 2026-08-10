@@ -143,7 +143,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
     <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between">
 
       {/* ── TOP HEADER HUD ─────────────────────────────────────────── */}
-      <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 jrpg-box p-2.5 mx-0 shadow-2xl">
+      <div className="pointer-events-auto flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 jrpg-box p-2 mx-0 shadow-2xl overflow-x-auto max-w-full">
         {/* Logo + World */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">

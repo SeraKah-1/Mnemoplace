@@ -328,6 +328,7 @@ export default function App() {
       {showMinimap && (
         <div className="fixed top-20 right-4 z-40">
           <Minimap
+            worldId={activeWorld.id}
             playerPosition={playerPosition}
             blocks={blocks.filter((b) => b.worldId === activeWorld.id)}
             themeColor={activeWorld.themeColor}

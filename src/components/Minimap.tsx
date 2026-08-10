@@ -3,7 +3,10 @@ import { MemoryBlock } from "../domain/types";
 import { PlayerPosition } from "../engine/PlayerController";
 import { Map, X } from "lucide-react";
 
+import { chunkManager } from "../engine/ChunkManager";
+
 interface MinimapProps {
+  worldId: string;
   playerPosition: PlayerPosition;
   blocks: MemoryBlock[];
   themeColor: string;
@@ -12,6 +15,7 @@ interface MinimapProps {
 }
 
 export const Minimap: React.FC<MinimapProps> = ({
+  worldId,
   playerPosition,
   blocks,
   themeColor,
@@ -20,6 +24,8 @@ export const Minimap: React.FC<MinimapProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const VIEW_RADIUS_TILES = 40; // Overview radius in tiles (-40 to +40 tiles around player)
+
+  const district = chunkManager.getDistrictInfo(worldId, playerPosition.tileX, playerPosition.tileY);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -97,13 +103,13 @@ export const Minimap: React.FC<MinimapProps> = ({
   };
 
   return (
-    <div className="jrpg-box p-3 text-slate-100 flex flex-col gap-2 shadow-2xl">
+    <div className="jrpg-box p-3 text-slate-100 flex flex-col gap-2 shadow-2xl max-w-[240px]">
       <div className="flex justify-between items-center text-xs border-b-2 border-slate-800 pb-1.5 font-pixel">
         <span className="font-bold flex items-center gap-1.5 text-cyan-400">
           <Map className="w-3.5 h-3.5" />
           SPATIAL MAP
         </span>
-        <span className="text-[10px] text-amber-300">
+        <span className="text-[10px] text-amber-300 font-mono">
           ({playerPosition.tileX}, {playerPosition.tileY})
         </span>
         {onClose && (
@@ -111,6 +117,11 @@ export const Minimap: React.FC<MinimapProps> = ({
             <X className="w-3.5 h-3.5" />
           </button>
         )}
+      </div>
+
+      {/* Room Name Badge */}
+      <div className="bg-slate-900 border border-slate-700 px-2 py-1 rounded text-[9px] font-pixel text-amber-300 truncate">
+        📍 {district.roomName}
       </div>
 
       <div className="relative border border-zinc-800 rounded-xl overflow-hidden cursor-crosshair shadow-inner">
@@ -124,7 +135,7 @@ export const Minimap: React.FC<MinimapProps> = ({
         />
       </div>
 
-      <p className="text-[9px] text-zinc-500 text-center">Click anywhere on minimap to Teleport</p>
+      <p className="text-[9px] text-zinc-400 text-center font-pixel">Click map to Teleport</p>
     </div>
   );
 };

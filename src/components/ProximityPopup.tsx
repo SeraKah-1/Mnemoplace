@@ -3,7 +3,7 @@ import { MemoryBlock, PixelDoodle } from "../domain/types";
 import { pixiApp } from "../engine/PixiApp";
 import { PlayerPosition } from "../engine/PlayerController";
 import { chunkManager } from "../engine/ChunkManager";
-import { Eye, Sparkles, HelpCircle, MapPin } from "lucide-react";
+import { Eye, Sparkles, HelpCircle, MapPin, Edit3, Check, X, RotateCcw } from "lucide-react";
 import { getDoodleById } from "../domain/db";
 
 interface ProximityPopupProps {
@@ -26,7 +26,11 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   const [screenPos, setScreenPos] = useState<{ x: number; y: number } | null>(null);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
 
-  const district = chunkManager.getDistrictInfo(playerPosition.tileX, playerPosition.tileY);
+  // Room Rename Modal state
+  const [showRenameModal, setShowRenameModal] = useState<boolean>(false);
+  const [roomInput, setRoomInput] = useState<string>("");
+
+  const district = chunkManager.getDistrictInfo(worldId, playerPosition.tileX, playerPosition.tileY);
 
   // Hysteresis threshold logic: active < 2.5 tiles, inactive > 3.5 tiles
   useEffect(() => {
@@ -83,101 +87,187 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setScreenPos(pos);
   }, [activeBlock, playerPosition]);
 
+  const handleOpenRename = () => {
+    setRoomInput(district.roomName);
+    setShowRenameModal(true);
+  };
+
+  const handleSaveRename = () => {
+    chunkManager.setCustomRoomName(worldId, district.cx, district.cy, roomInput);
+    setShowRenameModal(false);
+  };
+
+  const handleResetRename = () => {
+    chunkManager.setCustomRoomName(worldId, district.cx, district.cy, "");
+    setShowRenameModal(false);
+  };
+
   const showContent = studyMode || isRevealed;
+
+  // Viewport Edge Clamping calculation (prevents thumbnail/popup from overflowing screen boundaries)
+  const cardHalfWidth = 145; // 290px / 2
+  const clampedX = screenPos ? Math.max(cardHalfWidth + 12, Math.min(window.innerWidth - cardHalfWidth - 12, screenPos.x)) : 0;
+  const clampedY = screenPos ? Math.max(130, Math.min(window.innerHeight - 40, screenPos.y - 70)) : 0;
 
   return (
     <>
-      {/* Permanent District Landmark Location Banner — sits below header HUD (top-[72px]) */}
-      <div className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-none" style={{ top: '60px' }}>
-        <div className="jrpg-box px-3 py-1.5 flex items-center gap-2 animate-fade-in shadow-xl">
+      {/* Permanent District Landmark Location Banner — sits below header HUD (top-[60px]) */}
+      <div className="fixed left-1/2 -translate-x-1/2 z-40 pointer-events-auto" style={{ top: '60px' }}>
+        <div className="jrpg-box px-3 py-1.5 flex items-center gap-2 animate-fade-in shadow-2xl">
           <MapPin className="w-3.5 h-3.5 text-amber-400 animate-bounce flex-shrink-0" />
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] font-pixel font-bold text-amber-400 tracking-widest uppercase">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[8px] font-pixel font-bold text-amber-400 tracking-widest uppercase truncate max-w-[90px] sm:max-w-none">
               {district.districtTag}
             </span>
             <span className="text-slate-600 text-[8px]">›</span>
-            <span className="text-[9px] font-pixel text-slate-100 font-bold">
+            <span className="text-[9px] font-pixel text-slate-100 font-bold truncate max-w-[120px] sm:max-w-[180px]">
               {district.roomName}
             </span>
+            {/* Edit / Rename Room Button */}
+            <button
+              onClick={handleOpenRename}
+              className="p-1 hover:bg-slate-800 rounded text-cyan-400 hover:text-amber-300 transition-all active:scale-95 ml-0.5"
+              title="Rename Room / Chamber"
+            >
+              <Edit3 className="w-3 h-3" />
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Room Rename JRPG Modal */}
+      {showRenameModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto animate-fade-in">
+          <div className="jrpg-box p-4 max-w-sm w-full flex flex-col gap-3 shadow-2xl">
+            <div className="flex justify-between items-center border-b-2 border-slate-800 pb-2">
+              <h3 className="text-xs font-pixel font-bold text-amber-400 flex items-center gap-1.5">
+                <Edit3 className="w-4 h-4 text-cyan-400" />
+                RENAME ROOM / CHAMBER
+              </h3>
+              <button onClick={() => setShowRenameModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-[10px] font-pixel text-slate-300">
+              Chamber Position: <span className="text-amber-300 font-mono">[{district.cx}, {district.cy}]</span> ({district.districtTag})
+            </div>
+
+            <input
+              type="text"
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value)}
+              placeholder="e.g. Ruang Rumus Fisika, N5 Vocabulary Room"
+              className="w-full bg-slate-900 border-2 border-slate-700 text-white font-pixel text-xs p-2.5 rounded focus:border-amber-400 outline-none"
+              autoFocus
+            />
+
+            <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-800">
+              <button
+                onClick={handleResetRename}
+                className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 text-[10px] font-pixel rounded flex items-center gap-1"
+                title="Reset to default name"
+              >
+                <RotateCcw className="w-3 h-3" />
+                RESET
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowRenameModal(false)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-pixel rounded"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleSaveRename}
+                  className="px-3.5 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white text-[10px] font-pixel font-bold rounded flex items-center gap-1 shadow-lg"
+                >
+                  <Check className="w-3 h-3 text-amber-400" />
+                  SAVE
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proximity Thumbnail Hover Card (Clamped edge positioning to prevent offscreen clipping) */}
       {activeBlock && screenPos && (
         <div
           style={{
-            left: `${screenPos.x}px`,
-            top: `${screenPos.y - 70}px`,
+            left: `${clampedX}px`,
+            top: `${clampedY}px`,
             transform: "translate(-50%, -100%)",
           }}
-          className="fixed z-50 pointer-events-auto cursor-pointer animate-fade-in"
+          className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
           onClick={() => onOpenBlock(activeBlock)}
         >
-      <div className="jrpg-box p-3.5 text-slate-100 max-w-xs flex flex-col gap-2 relative group hover:border-amber-400 transition-all">
-        <div className="relative z-10 flex items-start gap-3">
-          {/* Hand-drawn Pixel Doodle Cue */}
-          {doodle && (
-            <div className="w-12 h-12 rounded bg-slate-950 border-2 border-slate-700 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden">
-              <DoodleCanvasPreview doodle={doodle} />
-            </div>
-          )}
+          <div className="jrpg-box p-3 text-slate-100 max-w-[280px] sm:max-w-xs w-full flex flex-col gap-2 relative group hover:border-amber-400 transition-all shadow-2xl overflow-hidden">
+            <div className="relative z-10 flex items-start gap-2.5">
+              {/* Hand-drawn Pixel Doodle Cue */}
+              {doodle && (
+                <div className="w-11 h-11 rounded bg-slate-950 border-2 border-slate-700 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md">
+                  <DoodleCanvasPreview doodle={doodle} />
+                </div>
+              )}
 
-          <div className="min-w-0 flex-1">
-            <div className="flex justify-between items-center gap-1">
-              <span className="text-[10px] font-pixel font-bold tracking-wider text-amber-300 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-cyan-400" />
-                MNEMONIC ANCHOR
-              </span>
-              <span className="text-[9px] font-pixel text-slate-400">
-                ({activeBlock.x}, {activeBlock.y})
-              </span>
-            </div>
-
-            <h3 className="text-xs font-pixel font-bold text-white truncate leading-snug mt-0.5">{activeBlock.title}</h3>
-
-            {/* Tags */}
-            {activeBlock.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {activeBlock.tags.map((t, idx) => (
-                  <span key={idx} className="text-[9px] font-pixel bg-indigo-950 text-cyan-300 border border-indigo-700 px-1 py-0.2 rounded">
-                    #{t}
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between items-center gap-1">
+                  <span className="text-[9px] font-pixel font-bold tracking-wider text-amber-300 flex items-center gap-1 truncate">
+                    <Sparkles className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+                    MNEMONIC ANCHOR
                   </span>
-                ))}
+                  <span className="text-[9px] font-pixel text-slate-400 font-mono flex-shrink-0">
+                    ({activeBlock.x}, {activeBlock.y})
+                  </span>
+                </div>
+
+                <h3 className="text-xs font-pixel font-bold text-white truncate leading-snug mt-0.5">{activeBlock.title}</h3>
+
+                {/* Tags */}
+                {activeBlock.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {activeBlock.tags.map((t, idx) => (
+                      <span key={idx} className="text-[8px] font-pixel bg-indigo-950 text-cyan-300 border border-indigo-700 px-1 py-0.2 rounded truncate max-w-[90px]">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Content Section (Desirable Difficulties Active Retrieval Cue vs Answer) */}
+            <div className="relative z-10 border-t-2 border-slate-800 pt-2 mt-0.5 text-xs">
+              {showContent ? (
+                <p className="text-slate-200 text-[10px] sm:text-[11px] leading-relaxed whitespace-pre-wrap line-clamp-4">{activeBlock.text}</p>
+              ) : (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsRevealed(true);
+                  }}
+                  className="bg-slate-950 border-2 border-amber-500/60 p-1.5 rounded text-center flex items-center justify-center gap-1.5 text-amber-300 hover:border-amber-400 transition-all active:translate-y-0.5"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                  <span className="text-[9px] font-pixel font-bold">CLICK TO RECALL MEMORY</span>
+                </div>
+              )}
+            </div>
+
+            <div className="relative z-10 flex justify-between items-center text-[8px] font-pixel text-slate-400 border-t-2 border-slate-800/80 pt-1">
+              <span className="flex items-center gap-1 text-cyan-300">
+                <Eye className="w-3 h-3 text-cyan-400" />
+                TAP TO INSPECT
+              </span>
+              <span className="text-slate-400 font-mono">DUE: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
-
-        {/* Content Section (Desirable Difficulties Active Retrieval Cue vs Answer) */}
-        <div className="relative z-10 border-t-2 border-slate-800 pt-2 mt-1 text-xs">
-          {showContent ? (
-            <p className="text-slate-200 text-[11px] leading-relaxed whitespace-pre-wrap">{activeBlock.text}</p>
-          ) : (
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsRevealed(true);
-              }}
-              className="bg-slate-950 border-2 border-amber-500/60 p-2 rounded text-center flex items-center justify-center gap-1.5 text-amber-300 hover:border-amber-400 transition-all active:translate-y-0.5"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="text-[10px] font-pixel font-bold">CLICK TO RECALL MEMORY</span>
-            </div>
-          )}
-        </div>
-
-        <div className="relative z-10 flex justify-between items-center text-[9px] font-pixel text-slate-400 border-t-2 border-slate-800/80 pt-1.5">
-          <span className="flex items-center gap-1 text-cyan-300">
-            <Eye className="w-3 h-3 text-cyan-400" />
-            TAP TO INSPECT
-          </span>
-          <span className="text-slate-400 font-mono">DUE: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
-        </div>
-        </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
 };
 
 // Helper component to render small canvas preview of PixelDoodle
@@ -207,5 +297,5 @@ const DoodleCanvasPreview: React.FC<{ doodle: PixelDoodle }> = ({ doodle }) => {
     }
   }, [doodle]);
 
-  return <canvas ref={canvasRef} width={48} height={48} className="w-full h-full block rounded" />;
+  return <canvas ref={canvasRef} width={44} height={44} className="w-full h-full block rounded" />;
 };

@@ -233,21 +233,78 @@ export class ChunkManager {
     return tileType === 5 || tileType === 6 || tileType === 7;
   }
 
-  public getDistrictInfo(tileX: number, tileY: number): { roomName: string; districtTag: string } {
+  private customRoomNames = new Map<string, string>(); // Key: `${worldId}:${cx},${cy}`
+
+  public loadCustomRoomNames() {
+    try {
+      if (typeof localStorage === "undefined") return;
+      const raw = localStorage.getItem("mnemoplace_room_names");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        for (const [k, v] of Object.entries(parsed)) {
+          if (typeof v === "string") this.customRoomNames.set(k, v);
+        }
+      }
+    } catch (_) {}
+  }
+
+  public setCustomRoomName(worldId: string, cx: number, cy: number, name: string): string {
+    const key = `${worldId}:${cx},${cy}`;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      this.customRoomNames.delete(key);
+    } else {
+      this.customRoomNames.set(key, trimmed);
+    }
+    try {
+      if (typeof localStorage !== "undefined") {
+        const obj: Record<string, string> = {};
+        for (const [k, v] of this.customRoomNames.entries()) {
+          obj[k] = v;
+        }
+        localStorage.setItem("mnemoplace_room_names", JSON.stringify(obj));
+      }
+    } catch (_) {}
+    return trimmed;
+  }
+
+  public getDistrictInfo(worldId: string, tileX: number, tileY: number): { roomName: string; districtTag: string; cx: number; cy: number; isCustom: boolean } {
+    if (this.customRoomNames.size === 0) {
+      this.loadCustomRoomNames();
+    }
+
     const cx = tileToChunkCoord(tileX);
     const cy = tileToChunkCoord(tileY);
+    const key = `${worldId}:${cx},${cy}`;
+
+    const custom = this.customRoomNames.get(key);
+    let districtTag = "Chamber Zone";
+    let defaultName = "";
 
     if (cx === 0 && cy === 0) {
-      return { roomName: "Sovereign Grand Courtyard", districtTag: "Tower Main Plaza" };
+      districtTag = "Tower Main Plaza";
+      defaultName = "Sovereign Grand Courtyard";
     } else if (cy < 0 && Math.abs(cx) <= Math.abs(cy)) {
-      return { roomName: `Arcane Library Wing [Chamber ${cx},${cy}]`, districtTag: "North Academic Spire" };
+      districtTag = "North Academic Spire";
+      defaultName = `Arcane Library Wing [Chamber ${cx},${cy}]`;
     } else if (cx > 0 && Math.abs(cy) < Math.abs(cx)) {
-      return { roomName: `Sanctuary Garden [Chamber ${cx},${cy}]`, districtTag: "East Celestial Wing" };
+      districtTag = "East Celestial Wing";
+      defaultName = `Sanctuary Garden [Chamber ${cx},${cy}]`;
     } else if (cx < 0 && Math.abs(cy) < Math.abs(cx)) {
-      return { roomName: `Dungeon Stone Vault [Chamber ${cx},${cy}]`, districtTag: "West Relic Crypt" };
+      districtTag = "West Relic Crypt";
+      defaultName = `Dungeon Stone Vault [Chamber ${cx},${cy}]`;
     } else {
-      return { roomName: `Observatory Deck [Chamber ${cx},${cy}]`, districtTag: "South Horizon Terrace" };
+      districtTag = "South Horizon Terrace";
+      defaultName = `Observatory Deck [Chamber ${cx},${cy}]`;
     }
+
+    return {
+      roomName: custom || defaultName,
+      districtTag,
+      cx,
+      cy,
+      isCustom: Boolean(custom),
+    };
   }
 
   private generateProceduralTerrain(cx: number, cy: number): Uint16Array {
