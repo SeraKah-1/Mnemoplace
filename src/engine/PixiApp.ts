@@ -24,16 +24,28 @@ export class PixiApp {
   private isInitialized = false;
 
   public async init(containerElement: HTMLDivElement): Promise<void> {
-    if (this.isInitialized) return;
+    if (this.isInitialized && this.app) return;
 
-    this.app = new Application();
-    await this.app.init({
+    const app = new Application();
+    await app.init({
       resizeTo: window,
       backgroundColor: 0x090d16, // Dark slate background
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
       antialias: false, // Enforce crisp retro pixels
     });
+
+    // If destroyed while init promise was resolving, cleanup and abort
+    if (this.isInitialized || !containerElement) {
+      try {
+        app.destroy(true);
+      } catch (_) {}
+      return;
+    }
+
+    this.app = app;
+
+    if (!this.app || !this.app.canvas) return;
 
     const canvas = this.app.canvas;
     canvas.style.position = "absolute";
@@ -71,14 +83,16 @@ export class PixiApp {
     await this.reloadDoodlesCache();
 
     // Add Ticker update loop
-    this.app.ticker.add((ticker) => {
-      this.update(ticker.deltaTime);
-    });
+    if (this.app) {
+      this.app.ticker.add((ticker) => {
+        this.update(ticker.deltaTime);
+      });
+    }
 
     this.isInitialized = true;
 
     // Initial render
-    await this.refreshWorld();
+    await this.refreshWorld(true);
   }
 
   public setOnTileClick(cb: (tileX: number, tileY: number, existingBlock?: MemoryBlock) => void) {
