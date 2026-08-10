@@ -104,15 +104,17 @@ export class PlayerController {
     const nextX = this.x + moveDistX;
     const nextY = this.y + moveDistY;
 
-    // 6px Bounding Box radius around player center
+    // 5px Bounding Box radius around player center
     const radius = 5;
+    const currentTileX = worldPxToTile(this.x);
+    const currentTileY = worldPxToTile(this.y);
+    const isCurrentlyStuck = this.isTileSolidFunc ? this.isTileSolidFunc(currentTileX, currentTileY) : false;
 
     // Independent X-axis collision check (enables wall sliding)
     if (this.isTileSolidFunc) {
       const checkX = nextX + (moveDistX > 0 ? radius : -radius);
       const tileXAtNext = worldPxToTile(checkX);
-      const tileYAtCurrent = worldPxToTile(this.y);
-      if (!this.isTileSolidFunc(tileXAtNext, tileYAtCurrent)) {
+      if (isCurrentlyStuck || !this.isTileSolidFunc(tileXAtNext, currentTileY)) {
         this.x = nextX;
       }
     } else {
@@ -122,9 +124,9 @@ export class PlayerController {
     // Independent Y-axis collision check (enables wall sliding)
     if (this.isTileSolidFunc) {
       const checkY = nextY + (moveDistY > 0 ? radius : -radius);
-      const tileXAtCurrent = worldPxToTile(this.x);
       const tileYAtNext = worldPxToTile(checkY);
-      if (!this.isTileSolidFunc(tileXAtCurrent, tileYAtNext)) {
+      const tileXAtCurrent = worldPxToTile(this.x);
+      if (isCurrentlyStuck || !this.isTileSolidFunc(tileXAtCurrent, tileYAtNext)) {
         this.y = nextY;
       }
     } else {

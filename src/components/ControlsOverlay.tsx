@@ -30,6 +30,7 @@ interface ControlsOverlayProps {
   onPlaceAnchorClick: () => void;
   onDeleteAtPlayer: () => void;
   onVirtualDirection: (vx: number, vy: number) => void;
+  onOpenSync?: () => void;
 }
 
 export const TILE_BLOCK_TYPES = [
@@ -58,6 +59,10 @@ const DPadBtn: React.FC<DPadBtnProps> = ({ vx, vy, onDir, children, className = 
     onMouseLeave={() => onDir(0, 0)}
     onTouchStart={(e) => { e.preventDefault(); onDir(vx, vy); }}
     onTouchEnd={(e) => { e.preventDefault(); onDir(0, 0); }}
+    onTouchCancel={() => onDir(0, 0)}
+    onPointerDown={(e) => { if (e.pointerType === "touch") e.preventDefault(); onDir(vx, vy); }}
+    onPointerUp={() => onDir(0, 0)}
+    onPointerCancel={() => onDir(0, 0)}
     className={`flex items-center justify-center select-none active:scale-90 transition-transform ${className}`}
   >
     {children}
@@ -130,6 +135,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onPlaceAnchorClick,
   onDeleteAtPlayer,
   onVirtualDirection,
+  onOpenSync,
 }) => {
   const [showHotbar, setShowHotbar] = useState(false);
 
