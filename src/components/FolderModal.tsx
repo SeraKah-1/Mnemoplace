@@ -62,15 +62,15 @@ export const FolderModal: React.FC<FolderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl p-6 w-full max-w-lg flex flex-col gap-5 text-zinc-100 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 crt-scanlines">
+      <div className="jrpg-box p-5 w-full max-w-lg flex flex-col gap-4 text-slate-100 animate-fade-in">
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <Folder className="w-5 h-5 text-indigo-400" />
+            <Folder className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">Memory World Realms (Folders)</h2>
-              <p className="text-xs text-zinc-400">Separate topics into distinct spatial realms to eliminate memory interference</p>
+              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">MEMORY WORLD REALMS</h2>
+              <p className="text-[10px] font-pixel text-slate-400 mt-0.5">Separate topics into distinct spatial realms</p>
             </div>
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800">

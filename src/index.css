@@ -7,23 +7,90 @@ canvas {
   -ms-interpolation-mode: nearest-neighbor;
 }
 
+/* Retro Pixel Font Classes */
+.font-pixel {
+  font-family: 'Silkscreen', monospace;
+  letter-spacing: 0.05em;
+}
+
+.font-retro-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* JRPG Classic Dialog Box Frame */
+.jrpg-box {
+  background: linear-gradient(180deg, #0f172a 0%, #090d16 100%);
+  border: 4px solid #334155;
+  box-shadow:
+    inset 0 0 0 2px #1e293b,
+    inset 0 0 0 4px #0284c7,
+    0 8px 32px rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  image-rendering: pixelated;
+}
+
+.jrpg-box-gold {
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+  border: 4px solid #d97706;
+  box-shadow:
+    inset 0 0 0 2px #451a03,
+    inset 0 0 0 4px #fbbf24,
+    0 8px 32px rgba(0, 0, 0, 0.9);
+  border-radius: 4px;
+}
+
+/* JRPG Retro Tactile Buttons */
+.jrpg-btn {
+  font-family: 'Silkscreen', monospace;
+  position: relative;
+  background: #1e1b4b;
+  border: 2px solid #6366f1;
+  color: #f8fafc;
+  box-shadow: 0 4px 0 #312e81, 0 0 8px rgba(99, 102, 241, 0.3);
+  text-transform: uppercase;
+  transition: all 0.05s ease;
+  image-rendering: pixelated;
+}
+
+.jrpg-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #312e81, 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+/* Subtle CRT Retro Scanline Overlay */
+.crt-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: #334155;
+  border: 1px solid #6366f1;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: #475569;
 }
 
-/* Smooth scrolling */
+/* Smooth layout */
 html, body, #root {
   width: 100vw;
   height: 100vh;
@@ -31,13 +98,13 @@ html, body, #root {
   padding: 0;
   background-color: #090d16;
   color: #f8fafc;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Silkscreen', 'Inter', monospace, sans-serif;
   overflow: hidden;
 }
 
 /* Focus ring override */
 *:focus-visible {
-  outline: 2px solid rgba(99, 102, 241, 0.6);
+  outline: 2px solid #818cf8;
   outline-offset: 2px;
 }
 
@@ -47,5 +114,5 @@ html, body, #root {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.15s ease-out forwards;
+  animation: fadeIn 0.12s ease-out forwards;
 }

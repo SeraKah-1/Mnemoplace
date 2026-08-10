@@ -30,25 +30,25 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onVirtualDirection,
 }) => {
   return (
-    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-4">
-      {/* Top Header Bar */}
-      <div className="pointer-events-auto flex items-center justify-between gap-3 bg-zinc-900/90 border border-zinc-800 backdrop-blur-md rounded-2xl p-3 shadow-2xl">
-        <div className="flex items-center gap-3">
+    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-3 sm:p-4 crt-scanlines">
+      {/* Top Retro JRPG Header Bar */}
+      <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 jrpg-box p-2.5 sm:p-3 shadow-2xl">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
-            <Brain className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-base font-bold tracking-tight text-white hidden sm:block">
-              Mnemo<span className="text-indigo-400">Place</span>
+            <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400 animate-pulse" />
+            <h1 className="text-xs sm:text-sm font-pixel font-bold tracking-wider text-white">
+              MNEMO<span className="text-amber-400">PLACE</span>
             </h1>
           </div>
 
           {/* Active World Realm Selector Badge */}
           <button
             onClick={onOpenFolders}
-            className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 hover:border-indigo-500/50 px-3 py-1.5 rounded-xl text-xs text-white transition-all"
+            className="flex items-center gap-1.5 bg-slate-900 border-2 border-indigo-500/60 hover:border-amber-400 px-2.5 py-1 rounded text-[11px] font-pixel text-slate-100 transition-all active:translate-y-0.5"
           >
-            <div style={{ backgroundColor: activeWorld.themeColor }} className="w-3 h-3 rounded-full border border-white/20" />
-            <span className="font-semibold truncate max-w-[140px]">{activeWorld.name}</span>
-            <Folder className="w-3.5 h-3.5 text-zinc-500" />
+            <div style={{ backgroundColor: activeWorld.themeColor }} className="w-2.5 h-2.5 rounded-sm border border-white/40" />
+            <span className="font-pixel truncate max-w-[100px] sm:max-w-[140px] text-amber-300">{activeWorld.name}</span>
+            <Folder className="w-3 h-3 text-slate-400" />
           </button>
         </div>
 
@@ -56,39 +56,37 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
           {/* Mode Toggle (Explore Cue vs Study Reveal) */}
           <button
             onClick={onToggleStudyMode}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
               studyMode
-                ? "bg-amber-950/60 border-amber-800/60 text-amber-300"
-                : "bg-indigo-950/60 border-indigo-800/60 text-indigo-300"
+                ? "bg-amber-950/80 border-amber-500 text-amber-300"
+                : "bg-indigo-950/80 border-indigo-500 text-cyan-300"
             }`}
-            title="Toggle between Cue Mode (active recall) and Study Mode (full reveal)"
+            title="Toggle between Cue Mode (Active Recall) and Study Mode (Full Reveal)"
           >
-            {studyMode ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5 text-indigo-400" />}
-            <span className="hidden md:inline">{studyMode ? "Study (Reveal) Mode" : "Explore (Cue) Mode"}</span>
+            {studyMode ? <Eye className="w-3.5 h-3.5 text-amber-400" /> : <EyeOff className="w-3.5 h-3.5 text-cyan-400" />}
+            <span className="hidden sm:inline">{studyMode ? "STUDY (REVEAL)" : "EXPLORE (CUE)"}</span>
           </button>
 
           {/* FSRS Review Queue Badge */}
           <button
             onClick={onOpenReview}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all relative ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-pixel border-2 transition-all active:translate-y-0.5 ${
               dueCount > 0
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-lg animate-pulse"
-                : "bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700"
+                ? "bg-amber-500 border-amber-300 text-slate-950 font-bold shadow-lg animate-pulse"
+                : "bg-slate-900 border-slate-700 text-slate-300 hover:border-indigo-400"
             }`}
           >
             <Brain className="w-3.5 h-3.5" />
-            <span>SRS Review</span>
-            {dueCount > 0 && (
-              <span className="bg-amber-400 text-zinc-950 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full">
-                {dueCount}
-              </span>
-            )}
+            <span className="hidden sm:inline">SRS REVIEW</span>
+            <span className="bg-slate-950 text-amber-400 px-1 py-0.2 text-[10px] font-mono font-bold rounded">
+              {dueCount}
+            </span>
           </button>
 
           {/* Journal Search */}
           <button
             onClick={onOpenJournal}
-            className="p-2 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-xl transition-all"
+            className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-cyan-400 rounded transition-all active:translate-y-0.5"
             title="Memory Journal & Index"
           >
             <BookOpen className="w-4 h-4" />
@@ -97,7 +95,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
           {/* Backup Data */}
           <button
             onClick={onOpenBackup}
-            className="p-2 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-xl transition-all"
+            className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-emerald-400 rounded transition-all active:translate-y-0.5"
             title="JSON Backup & Data Safety"
           >
             <ShieldCheck className="w-4 h-4" />
@@ -105,76 +103,83 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
         </div>
       </div>
 
-      {/* Bottom Bar & Controls */}
-      <div className="pointer-events-auto flex items-end justify-between gap-4">
-        {/* Mobile Virtual D-pad Joystick */}
-        <div className="bg-zinc-900/90 border border-zinc-800 backdrop-blur-md rounded-2xl p-2 shadow-2xl flex flex-col items-center gap-1 sm:hidden">
+      {/* Bottom Bar & JRPG Mobile Virtual Controls */}
+      <div className="pointer-events-auto flex items-end justify-between gap-3 w-full">
+        {/* Mobile Virtual D-pad Controller (Tactile 4-Way Directional Cross) */}
+        <div className="jrpg-box p-2 flex flex-col items-center gap-1 sm:hidden select-none">
           <button
             onMouseDown={() => onVirtualDirection(0, -1)}
             onMouseUp={() => onVirtualDirection(0, 0)}
-            onTouchStart={() => onVirtualDirection(0, -1)}
-            onTouchEnd={() => onVirtualDirection(0, 0)}
-            className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-200 active:scale-95"
+            onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(0, -1); }}
+            onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
+            className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
           >
-            <ArrowUp className="w-5 h-5" />
+            <ArrowUp className="w-6 h-6 text-cyan-400" />
           </button>
           <div className="flex gap-1">
             <button
               onMouseDown={() => onVirtualDirection(-1, 0)}
               onMouseUp={() => onVirtualDirection(0, 0)}
-              onTouchStart={() => onVirtualDirection(-1, 0)}
-              onTouchEnd={() => onVirtualDirection(0, 0)}
-              className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-200 active:scale-95"
+              onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(-1, 0); }}
+              onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
+              className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-6 h-6 text-cyan-400" />
             </button>
-            <button
-              onMouseDown={() => onVirtualDirection(0, 1)}
-              onMouseUp={() => onVirtualDirection(0, 0)}
-              onTouchStart={() => onVirtualDirection(0, 1)}
-              onTouchEnd={() => onVirtualDirection(0, 0)}
-              className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-200 active:scale-95"
-            >
-              <ArrowDown className="w-5 h-5" />
-            </button>
+            <div className="w-12 h-12 bg-slate-950 border-2 border-slate-800 rounded flex items-center justify-center">
+              <div className="w-3 h-3 bg-indigo-500 rounded-full animate-ping" />
+            </div>
             <button
               onMouseDown={() => onVirtualDirection(1, 0)}
               onMouseUp={() => onVirtualDirection(0, 0)}
-              onTouchStart={() => onVirtualDirection(1, 0)}
-              onTouchEnd={() => onVirtualDirection(0, 0)}
-              className="w-10 h-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center text-zinc-200 active:scale-95"
+              onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(1, 0); }}
+              onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
+              className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
             >
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-6 h-6 text-cyan-400" />
             </button>
           </div>
-        </div>
-
-        {/* Desktop Helper Instruction Cues */}
-        <div className="bg-zinc-900/90 border border-zinc-800 backdrop-blur-md rounded-2xl px-4 py-2 text-[11px] text-zinc-400 hidden sm:flex items-center gap-3">
-          <span>
-            Move: <kbd className="px-1.5 py-0.5 bg-zinc-800 text-zinc-200 rounded font-mono">WASD</kbd> /{" "}
-            <kbd className="px-1.5 py-0.5 bg-zinc-800 text-zinc-200 rounded font-mono">Arrows</kbd>
-          </span>
-          <span>•</span>
-          <span>Click any tile to Place Anchor</span>
-        </div>
-
-        {/* Action CTAs */}
-        <div className="flex items-center gap-2">
           <button
-            onClick={onToggleMinimap}
-            className="px-3.5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold rounded-2xl shadow-xl flex items-center gap-2 transition-all active:scale-95"
+            onMouseDown={() => onVirtualDirection(0, 1)}
+            onMouseUp={() => onVirtualDirection(0, 0)}
+            onTouchStart={(e) => { e.preventDefault(); onVirtualDirection(0, 1); }}
+            onTouchEnd={(e) => { e.preventDefault(); onVirtualDirection(0, 0); }}
+            className="w-12 h-12 bg-slate-800 active:bg-indigo-600 border-2 border-slate-600 rounded flex items-center justify-center text-white active:scale-95 shadow-md"
           >
-            <Map className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">Spatial Minimap</span>
+            <ArrowDown className="w-6 h-6 text-cyan-400" />
           </button>
+        </div>
 
+        {/* Desktop Retro Keyboard Cue Bar */}
+        <div className="jrpg-box px-3 py-1.5 text-[11px] font-pixel text-slate-300 hidden sm:flex items-center gap-3">
+          <span>
+            MOVE: <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">WASD</kbd> /{" "}
+            <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 text-amber-300 rounded font-mono">ARROWS</kbd>
+          </span>
+          <span className="text-slate-600">•</span>
+          <span>TAP ANY TILE TO PLACE MEMORY ANCHOR</span>
+        </div>
+
+        {/* Mobile JRPG Retro Action Buttons (A / B / X / Y) */}
+        <div className="flex items-center gap-2">
+          {/* Action Button A (Place Anchor) */}
           <button
             onClick={onPlaceAnchorClick}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-2xl shadow-2xl flex items-center gap-2 transition-all active:scale-95"
+            className="jrpg-btn px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-700 hover:bg-indigo-600 text-white text-[11px] font-pixel font-bold rounded flex items-center gap-1.5 shadow-xl active:translate-y-0.5"
           >
-            <Plus className="w-4 h-4" />
-            <span>Place Anchor</span>
+            <span className="w-5 h-5 bg-amber-400 text-slate-950 rounded font-mono font-bold flex items-center justify-center text-xs">
+              A
+            </span>
+            <span>ANCHOR</span>
+          </button>
+
+          {/* Minimap Toggle */}
+          <button
+            onClick={onToggleMinimap}
+            className="jrpg-btn px-2.5 py-2 sm:px-3.5 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-[11px] font-pixel rounded flex items-center gap-1.5 shadow-xl active:translate-y-0.5"
+          >
+            <Map className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">MAP</span>
           </button>
         </div>
       </div>

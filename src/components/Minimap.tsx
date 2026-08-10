@@ -97,17 +97,17 @@ export const Minimap: React.FC<MinimapProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900/90 border border-zinc-700/60 backdrop-blur-md rounded-2xl shadow-2xl p-3 text-zinc-100 flex flex-col gap-2">
-      <div className="flex justify-between items-center text-xs border-b border-zinc-800 pb-1.5">
-        <span className="font-bold flex items-center gap-1.5 text-indigo-400">
+    <div className="jrpg-box p-3 text-slate-100 flex flex-col gap-2 shadow-2xl">
+      <div className="flex justify-between items-center text-xs border-b-2 border-slate-800 pb-1.5 font-pixel">
+        <span className="font-bold flex items-center gap-1.5 text-cyan-400">
           <Map className="w-3.5 h-3.5" />
-          Spatial Minimap
+          SPATIAL MAP
         </span>
-        <span className="text-[10px] font-mono text-zinc-400">
+        <span className="text-[10px] text-amber-300">
           ({playerPosition.tileX}, {playerPosition.tileY})
         </span>
         {onClose && (
-          <button onClick={onClose} className="text-zinc-400 hover:text-white p-0.5">
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-0.5">
             <X className="w-3.5 h-3.5" />
           </button>
         )}

@@ -72,20 +72,20 @@ export const BlockModal: React.FC<BlockModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-5 text-zinc-100 animate-fade-in">
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 crt-scanlines">
+        <div className="jrpg-box p-5 w-full max-w-md flex flex-col gap-4 text-slate-100 animate-fade-in">
           {/* Header */}
-          <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+          <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3">
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
-                {existingBlock ? "Edit Mnemonic Anchor" : "Anchor New Memory"}
+              <h2 className="text-xs font-pixel font-bold text-amber-300 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-cyan-400" />
+                {existingBlock ? "EDIT MNEMONIC ANCHOR" : "ANCHOR NEW MEMORY"}
               </h2>
-              <p className="text-xs text-zinc-400 font-mono">
-                Tile Location: ({tileX}, {tileY}) in {worldId}
+              <p className="text-[10px] text-slate-400 font-pixel mt-0.5">
+                TILE ({tileX}, {tileY}) IN {worldId}
               </p>
             </div>
-            <button onClick={onCancel} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800">
+            <button onClick={onCancel} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800">
               <X className="w-5 h-5" />
             </button>
           </div>

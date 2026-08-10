@@ -94,36 +94,33 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
       className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
       onClick={() => onOpenBlock(activeBlock)}
     >
-      <div className="bg-zinc-900/95 border border-indigo-500/50 backdrop-blur-md text-zinc-100 p-3.5 rounded-2xl shadow-2xl max-w-xs flex flex-col gap-2 relative group hover:border-indigo-400 transition-all">
-        {/* Glow accent */}
-        <div className="absolute -inset-0.5 bg-indigo-500/20 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
-
+      <div className="jrpg-box p-3.5 text-slate-100 max-w-xs flex flex-col gap-2 relative group hover:border-amber-400 transition-all">
         <div className="relative z-10 flex items-start gap-3">
           {/* Hand-drawn Pixel Doodle Cue */}
           {doodle && (
-            <div className="w-12 h-12 rounded-xl bg-zinc-950 border border-zinc-700/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 rounded bg-slate-950 border-2 border-slate-700 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden">
               <DoodleCanvasPreview doodle={doodle} />
             </div>
           )}
 
           <div className="min-w-0 flex-1">
             <div className="flex justify-between items-center gap-1">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Mnemonic Anchor
+              <span className="text-[10px] font-pixel font-bold tracking-wider text-amber-300 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-cyan-400" />
+                MNEMONIC ANCHOR
               </span>
-              <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono">
+              <span className="text-[9px] font-pixel text-slate-400">
                 ({activeBlock.x}, {activeBlock.y})
               </span>
             </div>
 
-            <h3 className="text-sm font-bold text-white truncate leading-tight mt-0.5">{activeBlock.title}</h3>
+            <h3 className="text-xs font-pixel font-bold text-white truncate leading-snug mt-0.5">{activeBlock.title}</h3>
 
             {/* Tags */}
             {activeBlock.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {activeBlock.tags.map((t, idx) => (
-                  <span key={idx} className="text-[9px] bg-indigo-950/80 text-indigo-300 border border-indigo-800/40 px-1.5 py-0.2 rounded-md">
+                  <span key={idx} className="text-[9px] font-pixel bg-indigo-950 text-cyan-300 border border-indigo-700 px-1 py-0.2 rounded">
                     #{t}
                   </span>
                 ))}
@@ -133,29 +130,29 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
         </div>
 
         {/* Content Section (Desirable Difficulties Active Retrieval Cue vs Answer) */}
-        <div className="relative z-10 border-t border-zinc-800/80 pt-2 mt-1 text-xs">
+        <div className="relative z-10 border-t-2 border-slate-800 pt-2 mt-1 text-xs">
           {showContent ? (
-            <p className="text-zinc-200 line-clamp-3 leading-relaxed whitespace-pre-wrap">{activeBlock.text}</p>
+            <p className="text-slate-200 text-[11px] leading-relaxed whitespace-pre-wrap">{activeBlock.text}</p>
           ) : (
             <div
               onClick={(e) => {
                 e.stopPropagation();
                 setIsRevealed(true);
               }}
-              className="bg-zinc-950/80 border border-zinc-800 p-2 rounded-xl text-center flex items-center justify-center gap-1.5 text-zinc-400 hover:text-indigo-300 hover:border-indigo-500/40 transition-all"
+              className="bg-slate-950 border-2 border-amber-500/60 p-2 rounded text-center flex items-center justify-center gap-1.5 text-amber-300 hover:border-amber-400 transition-all active:translate-y-0.5"
             >
               <HelpCircle className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="text-[11px] font-semibold">Click to Recall Memory Note</span>
+              <span className="text-[10px] font-pixel font-bold">CLICK TO RECALL MEMORY</span>
             </div>
           )}
         </div>
 
-        <div className="relative z-10 flex justify-between items-center text-[10px] text-zinc-500 border-t border-zinc-800/50 pt-1.5">
-          <span className="flex items-center gap-1">
-            <Eye className="w-3 h-3 text-indigo-400" />
-            Press Space / Click to Inspect
+        <div className="relative z-10 flex justify-between items-center text-[9px] font-pixel text-slate-400 border-t-2 border-slate-800/80 pt-1.5">
+          <span className="flex items-center gap-1 text-cyan-300">
+            <Eye className="w-3 h-3 text-cyan-400" />
+            TAP TO INSPECT
           </span>
-          <span className="text-zinc-400 font-mono">SRS Due: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
+          <span className="text-slate-400 font-mono">DUE: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
         </div>
       </div>
     </div>

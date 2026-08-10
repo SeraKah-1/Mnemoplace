@@ -40,18 +40,18 @@ export const JournalModal: React.FC<JournalModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl p-6 w-full max-w-2xl h-[85vh] flex flex-col gap-4 text-zinc-100 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 crt-scanlines">
+      <div className="jrpg-box p-5 w-full max-w-2xl h-[85vh] flex flex-col gap-4 text-slate-100 animate-fade-in">
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
-            <BookOpen className="w-5 h-5 text-indigo-400" />
+            <BookOpen className="w-5 h-5 text-cyan-400" />
             <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Memory Journal & Index</h2>
-              <p className="text-xs text-zinc-400">Search and fast travel to any spatial anchor across your memory palaces</p>
+              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">MEMORY JOURNAL & INDEX</h2>
+              <p className="text-[10px] font-pixel text-slate-400 mt-0.5">Search and fast travel to any spatial anchor</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800">
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>

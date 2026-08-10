@@ -39,16 +39,16 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
   if (!currentBlock) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl p-6 w-full max-w-md text-center text-zinc-100 flex flex-col items-center gap-4">
-          <CheckCircle2 className="w-16 h-16 text-emerald-400 animate-bounce" />
-          <h2 className="text-xl font-bold text-white">All Memory Reviews Complete!</h2>
-          <p className="text-xs text-zinc-400">Your memory consolidation schedule is up to date.</p>
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 crt-scanlines">
+        <div className="jrpg-box-gold p-6 w-full max-w-md text-center text-slate-100 flex flex-col items-center gap-4">
+          <CheckCircle2 className="w-14 h-14 text-emerald-400 animate-bounce" />
+          <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300">ALL REVIEWS COMPLETE!</h2>
+          <p className="text-[10px] font-pixel text-slate-300">Your memory consolidation schedule is up to date.</p>
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl"
+            className="jrpg-btn px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-pixel rounded"
           >
-            Return to Palace
+            RETURN TO PALACE
           </button>
         </div>
       </div>
@@ -68,27 +68,27 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
     if (currentIndex < reviewQueue.length - 1) {
       setCurrentIndex((prev) => prev + 1);
+      setIsAnswerRevealed(false);
     } else {
-      // Completed queue
-      setCurrentIndex(reviewQueue.length);
+      onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl shadow-2xl p-6 w-full max-w-lg flex flex-col gap-5 text-zinc-100 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 crt-scanlines">
+      <div className="jrpg-box-gold p-5 sm:p-6 w-full max-w-lg flex flex-col gap-4 text-slate-100 animate-fade-in">
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <div className="flex justify-between items-center border-b-2 border-amber-500/40 pb-3">
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-indigo-400" />
+            <Brain className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">FSRS Active Recall Review Station</h2>
-              <p className="text-xs text-zinc-400">
-                Item {currentIndex + 1} of {reviewQueue.length} {dueBlocks.length > 0 ? "(Due Reviews)" : "(Practice)"}
+              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">FSRS ACTIVE RECALL STATION</h2>
+              <p className="text-[10px] font-pixel text-slate-400 mt-0.5">
+                ITEM {currentIndex + 1} OF {reviewQueue.length} (DUE REVIEWS)
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800">
+          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
