@@ -3,7 +3,7 @@ import { MemoryBlock, PixelDoodle } from "../domain/types";
 import { pixiApp } from "../engine/PixiApp";
 import { PlayerPosition } from "../engine/PlayerController";
 import { chunkManager } from "../engine/ChunkManager";
-import { Eye, Sparkles, HelpCircle, MapPin, Edit3, Check, X, RotateCcw } from "lucide-react";
+import { Eye, Sparkles, HelpCircle, MapPin, Edit3, Check, X, RotateCcw, GripHorizontal } from "lucide-react";
 import { getDoodleById } from "../domain/db";
 
 interface ProximityPopupProps {
@@ -26,11 +26,26 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   const [screenPos, setScreenPos] = useState<{ x: number; y: number } | null>(null);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
 
+  // Dragging state for mobile touchscreen & mouse
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ clientX: number; clientY: number; initialOffsetX: number; initialOffsetY: number }>({
+    clientX: 0,
+    clientY: 0,
+    initialOffsetX: 0,
+    initialOffsetY: 0,
+  });
+
   // Room Rename Modal state
   const [showRenameModal, setShowRenameModal] = useState<boolean>(false);
   const [roomInput, setRoomInput] = useState<string>("");
 
   const district = chunkManager.getDistrictInfo(worldId, playerPosition.tileX, playerPosition.tileY);
+
+  // Reset drag offset when active block changes
+  useEffect(() => {
+    setDragOffset({ x: 0, y: 0 });
+  }, [activeBlock?.id]);
 
   // Hysteresis threshold logic: active < 2.5 tiles, inactive > 3.5 tiles
   useEffect(() => {
@@ -87,6 +102,31 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setScreenPos(pos);
   }, [activeBlock, playerPosition]);
 
+  // Touch & Mouse Drag Handlers
+  const handleDragStart = (clientX: number, clientY: number) => {
+    isDraggingRef.current = true;
+    dragStartRef.current = {
+      clientX,
+      clientY,
+      initialOffsetX: dragOffset.x,
+      initialOffsetY: dragOffset.y,
+    };
+  };
+
+  const handleDragMove = (clientX: number, clientY: number) => {
+    if (!isDraggingRef.current) return;
+    const dx = clientX - dragStartRef.current.clientX;
+    const dy = clientY - dragStartRef.current.clientY;
+    setDragOffset({
+      x: dragStartRef.current.initialOffsetX + dx,
+      y: dragStartRef.current.initialOffsetY + dy,
+    });
+  };
+
+  const handleDragEnd = () => {
+    isDraggingRef.current = false;
+  };
+
   const handleOpenRename = () => {
     setRoomInput(district.roomName);
     setShowRenameModal(true);
@@ -108,6 +148,9 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   const cardHalfWidth = 145; // 290px / 2
   const clampedX = screenPos ? Math.max(cardHalfWidth + 12, Math.min(window.innerWidth - cardHalfWidth - 12, screenPos.x)) : 0;
   const clampedY = screenPos ? Math.max(130, Math.min(window.innerHeight - 40, screenPos.y - 70)) : 0;
+
+  const finalPosX = clampedX + dragOffset.x;
+  const finalPosY = clampedY + dragOffset.y;
 
   return (
     <>
@@ -192,18 +235,58 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
         </div>
       )}
 
-      {/* Proximity Thumbnail Hover Card (Clamped edge positioning to prevent offscreen clipping) */}
+      {/* Proximity Thumbnail Hover Card (Draggable via touch/mouse, with edge clamping) */}
       {activeBlock && screenPos && (
         <div
           style={{
-            left: `${clampedX}px`,
-            top: `${clampedY}px`,
+            left: `${finalPosX}px`,
+            top: `${finalPosY}px`,
             transform: "translate(-50%, -100%)",
           }}
           className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
           onClick={() => onOpenBlock(activeBlock)}
         >
           <div className="jrpg-box p-3 text-slate-100 max-w-[280px] sm:max-w-xs w-full flex flex-col gap-2 relative group hover:border-amber-400 transition-all shadow-2xl overflow-hidden">
+
+            {/* Touchscreen Drag Handle */}
+            <div
+              className="bg-slate-950/90 border-b border-slate-800 p-1 -mx-3 -mt-3 mb-1 flex items-center justify-center gap-1 cursor-grab active:cursor-grabbing touch-none select-none text-slate-400 hover:text-amber-300 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                handleDragStart(e.clientX, e.clientY);
+                const onMove = (me: MouseEvent) => handleDragMove(me.clientX, me.clientY);
+                const onUp = () => {
+                  handleDragEnd();
+                  window.removeEventListener("mousemove", onMove);
+                  window.removeEventListener("mouseup", onUp);
+                };
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", onUp);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                if (e.touches[0]) {
+                  handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+                }
+              }}
+              onTouchMove={(e) => {
+                e.stopPropagation();
+                if (e.touches[0]) {
+                  handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                handleDragEnd();
+              }}
+            >
+              <GripHorizontal className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span className="text-[8px] font-pixel text-amber-300 font-bold uppercase tracking-wider">
+                ::: DRAG TO MOVE :::
+              </span>
+            </div>
+
             <div className="relative z-10 flex items-start gap-2.5">
               {/* Hand-drawn Pixel Doodle Cue */}
               {doodle && (
