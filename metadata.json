@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Mnemoplace",
+  "description": "A Memory Palace app that transforms random thoughts into AI-generated visual mnemonics using Gemini and Veo.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
