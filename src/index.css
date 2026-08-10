@@ -19,6 +19,12 @@ canvas {
   line-height: 1.4;
 }
 
+/* Explicit pointer-events and user-select reset for forms and modal boxes */
+input, textarea, select, button, label, .jrpg-box, .jrpg-box-gold {
+  pointer-events: auto;
+  user-select: auto;
+}
+
 /* JRPG Classic Dialog Box Frame */
 .jrpg-box {
   background: linear-gradient(180deg, #0f172a 0%, #090d16 100%);
@@ -29,6 +35,7 @@ canvas {
     0 8px 32px rgba(0, 0, 0, 0.8);
   border-radius: 4px;
   image-rendering: pixelated;
+  pointer-events: auto;
 }
 
 .jrpg-box-gold {
@@ -39,6 +46,7 @@ canvas {
     inset 0 0 0 4px #fbbf24,
     0 8px 32px rgba(0, 0, 0, 0.9);
   border-radius: 4px;
+  pointer-events: auto;
 }
 
 /* JRPG Retro Tactile Buttons */

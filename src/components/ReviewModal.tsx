@@ -40,7 +40,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
   if (!currentBlock) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 crt-scanlines">
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
         <div className="jrpg-box-gold p-6 w-full max-w-md text-center text-slate-100 flex flex-col items-center gap-4">
           <CheckCircle2 className="w-14 h-14 text-emerald-400 animate-bounce" />
           <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300">ALL REVIEWS COMPLETE!</h2>
@@ -76,7 +76,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 crt-scanlines">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
       <div className="jrpg-box-gold p-5 sm:p-6 w-full max-w-lg flex flex-col gap-4 text-slate-100 animate-fade-in">
         {/* Header */}
         <div className="flex justify-between items-center border-b-2 border-amber-500/40 pb-3">

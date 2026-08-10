@@ -58,7 +58,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({ onDatabaseImported, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 crt-scanlines">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
       <div className="jrpg-box p-5 w-full max-w-md flex flex-col gap-4 text-slate-100 animate-fade-in">
         {/* Header */}
         <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3">

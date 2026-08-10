@@ -46,7 +46,7 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onVirtualDirection,
 }) => {
   return (
-    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-3 sm:p-4 crt-scanlines">
+    <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
       {/* Top Retro JRPG Header Bar */}
       <div className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 jrpg-box p-2.5 sm:p-3 shadow-2xl">
         <div className="flex items-center gap-2 sm:gap-3">

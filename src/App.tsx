@@ -236,6 +236,8 @@ export default function App() {
 
       {activeWorld && (
         <>
+          {/* Decorative CRT scanline overlay over canvas */}
+          <div className="fixed inset-0 z-20 pointer-events-none crt-scanlines" />
 
       {/* Proximity Cue Overlay (Explore vs Study Mode) */}
       <ProximityPopup
