@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import {
-  Brain, BookOpen, Map, Folder, ShieldCheck, Eye, EyeOff, Hammer, Trash2, Plus, Cloud,
+  Brain,
+  BookOpen,
+  Map,
+  Folder,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  Hammer,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { WorldFolder } from "../domain/types";
 
@@ -18,7 +27,6 @@ interface ControlsOverlayProps {
   onOpenReview: () => void;
   onToggleMinimap: () => void;
   onOpenBackup: () => void;
-  onOpenSync: () => void;
   onPlaceAnchorClick: () => void;
   onDeleteAtPlayer: () => void;
   onVirtualDirection: (vx: number, vy: number) => void;
@@ -119,7 +127,6 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onOpenReview,
   onToggleMinimap,
   onOpenBackup,
-  onOpenSync,
   onPlaceAnchorClick,
   onDeleteAtPlayer,
   onVirtualDirection,
@@ -222,15 +229,6 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
             title="Backup Data"
           >
             <ShieldCheck className="w-4 h-4" />
-          </button>
-
-          {/* Cloud Sync */}
-          <button
-            onClick={onOpenSync}
-            className="p-1.5 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 text-cyan-400 rounded transition-all active:translate-y-0.5"
-            title="Cloud Sync (cross-device)"
-          >
-            <Cloud className="w-4 h-4" />
           </button>
         </div>
       </div>
