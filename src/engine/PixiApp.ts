@@ -228,7 +228,19 @@ export class PixiApp {
 
   private handleKeyDownBound = (e: KeyboardEvent) => {
     if (!this.inputEnabled) return;
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    const target = e.target as HTMLElement;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return;
+    }
+
+    if (e.repeat) return;
+
+    // Prevent page scroll when using game navigation keys
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+      e.preventDefault();
+    }
+
     this.playerController.handleKeyDown(e.code);
   };
 
@@ -242,8 +254,12 @@ export class PixiApp {
     if (e.target !== this.app.canvas) return;
 
     const rect = this.app.canvas.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
+    // Support Retina / High-DPR display scaling
+    const scaleX = (this.app.screen?.width || rect.width) / (rect.width || 1);
+    const scaleY = (this.app.screen?.height || rect.height) / (rect.height || 1);
+
+    const screenX = (e.clientX - rect.left) * scaleX;
+    const screenY = (e.clientY - rect.top) * scaleY;
 
     const playerPos = this.playerController.getPosition();
     const screenWidth = this.app.screen?.width || window.innerWidth;
@@ -258,8 +274,10 @@ export class PixiApp {
     const tileY = worldPxToTile(worldPxY);
 
     const existingBlock = chunkManager.getBlockAt(this.currentWorldId, tileX, tileY);
+    console.log(`[PixiApp] Canvas tile clicked at (${tileX}, ${tileY}) - Block found:`, existingBlock ? existingBlock.title : "none");
+
     if (this.onTileClick) {
-      this.onTileClick(tileX, tileY, existingBlock);
+      this.onTileClick(tileX, tileY, existingBlock || undefined);
     }
   };
 

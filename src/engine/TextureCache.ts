@@ -57,18 +57,14 @@ export function getTileTexture(tileType: number, themeColor: string = "#6366f1")
     ctx.imageSmoothingEnabled = false;
 
     if (tileType === 0) {
-      // Baseline Grass/Polished Plain Surface
+      // Baseline Continuous Grass Surface (No grid seams)
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
 
-      ctx.fillStyle = themeColor;
-      ctx.globalAlpha = 0.15;
-      ctx.fillRect(0, 0, TILE_SIZE, 1);
-      ctx.fillRect(0, 0, 1, TILE_SIZE);
-      ctx.globalAlpha = 1.0;
-
+      // Subtle pixel detail
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(1, 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      ctx.fillRect(3, 4, 2, 2);
+      ctx.fillRect(10, 11, 2, 2);
     } else if (tileType === 1) {
       // Stone Path
       ctx.fillStyle = "#334155";

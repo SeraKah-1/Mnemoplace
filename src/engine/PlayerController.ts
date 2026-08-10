@@ -20,6 +20,14 @@ export class PlayerController {
 
   constructor(initialTileX = 0, initialTileY = 0) {
     this.setPosition(initialTileX * TILE_SIZE + TILE_SIZE / 2, initialTileY * TILE_SIZE + TILE_SIZE / 2);
+
+    // Clear stuck keys when window loses focus or tab hides
+    if (typeof window !== "undefined") {
+      window.addEventListener("blur", () => this.keysPressed.clear());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.keysPressed.clear();
+      });
+    }
   }
 
   public setPosition(pxX: number, pxY: number) {
@@ -75,7 +83,7 @@ export class PlayerController {
       this.direction = dy > 0 ? "down" : "up";
     }
 
-    const clampedDelta = Math.min(delta, 3);
+    const clampedDelta = Math.min(delta, 1.5);
     this.x += dx * this.speed * clampedDelta;
     this.y += dy * this.speed * clampedDelta;
 
