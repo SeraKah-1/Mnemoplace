@@ -58,7 +58,9 @@ export default function App() {
       setBlocks(allBlocks);
 
       if (currentWorld) {
-        await pixiApp.setWorld(currentWorld.id, currentWorld.themeColor, currentWorld.spawnX, currentWorld.spawnY);
+        const startX = currentWorld.lastTileX ?? currentWorld.spawnX;
+        const startY = currentWorld.lastTileY ?? currentWorld.spawnY;
+        await pixiApp.setWorld(currentWorld.id, currentWorld.themeColor, startX, startY);
       }
     } catch (err) {
       console.error("Failed to initialize database:", err);
@@ -102,16 +104,16 @@ export default function App() {
     };
   }, [refreshDatabase]);
 
-  // Debounce autosave player position to active world
+  // Debounce autosave player last known tile position to active world
   useEffect(() => {
     if (!activeWorld) return;
 
     const timer = setTimeout(() => {
-      if (activeWorld.spawnX !== playerPosition.tileX || activeWorld.spawnY !== playerPosition.tileY) {
+      if (activeWorld.lastTileX !== playerPosition.tileX || activeWorld.lastTileY !== playerPosition.tileY) {
         const updatedWorld = {
           ...activeWorld,
-          spawnX: playerPosition.tileX,
-          spawnY: playerPosition.tileY,
+          lastTileX: playerPosition.tileX,
+          lastTileY: playerPosition.tileY,
           updatedAt: Date.now(),
         };
         saveWorld(updatedWorld);
@@ -130,7 +132,9 @@ export default function App() {
     const targetWorld = worlds.find((w) => w.id === worldId);
     if (targetWorld) {
       setActiveWorld(targetWorld);
-      await pixiApp.setWorld(targetWorld.id, targetWorld.themeColor, targetWorld.spawnX, targetWorld.spawnY);
+      const startX = targetWorld.lastTileX ?? targetWorld.spawnX;
+      const startY = targetWorld.lastTileY ?? targetWorld.spawnY;
+      await pixiApp.setWorld(targetWorld.id, targetWorld.themeColor, startX, startY);
     }
   };
 

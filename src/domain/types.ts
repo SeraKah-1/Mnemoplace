@@ -10,8 +10,10 @@ export interface WorldFolder {
   id: string; // Unique slug/UUID, e.g. "world_default" or "world_japanese_vocab"
   name: string; // e.g. "Japanese Vocabulary"
   themeColor: string; // Hex color string for ground tile tint & minimap accent
-  spawnX: number; // Default spawn tile X
-  spawnY: number; // Default spawn tile Y
+  spawnX: number; // User-defined default spawn tile X
+  spawnY: number; // User-defined default spawn tile Y
+  lastTileX?: number; // Autosaved last player tile X
+  lastTileY?: number; // Autosaved last player tile Y
   description?: string;
   createdAt: number;
   updatedAt: number;

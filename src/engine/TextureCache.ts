@@ -2,18 +2,50 @@ import { Texture, CanvasSource } from "pixi.js";
 import { PixelDoodle } from "../domain/types";
 import { TILE_SIZE, DEFAULT_PALETTE } from "./constants";
 
+const MAX_TEXTURE_CACHE_SIZE = 150;
 const textureCache = new Map<string, Texture>();
 
+function getCachedTexture(key: string): Texture | undefined {
+  if (!textureCache.has(key)) return undefined;
+  const tex = textureCache.get(key)!;
+  textureCache.delete(key);
+  textureCache.set(key, tex);
+  return tex;
+}
+
+function setCachedTexture(key: string, texture: Texture): Texture {
+  if (textureCache.has(key)) {
+    textureCache.delete(key);
+  } else if (textureCache.size >= MAX_TEXTURE_CACHE_SIZE) {
+    const oldestKey = textureCache.keys().next().value;
+    if (oldestKey) {
+      const oldTex = textureCache.get(oldestKey);
+      if (oldTex) {
+        try {
+          oldTex.destroy(true);
+        } catch (_) {}
+      }
+      textureCache.delete(oldestKey);
+    }
+  }
+  textureCache.set(key, texture);
+  return texture;
+}
+
 export function clearTextureCache() {
+  for (const tex of textureCache.values()) {
+    try {
+      tex.destroy(true);
+    } catch (_) {}
+  }
   textureCache.clear();
 }
 
 // Create a tile texture for base ground types
 export function getTileTexture(tileType: number, themeColor: string = "#6366f1"): Texture {
   const cacheKey = `tile_${tileType}_${themeColor}`;
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey)!;
-  }
+  const cached = getCachedTexture(cacheKey);
+  if (cached) return cached;
 
   const canvas = document.createElement("canvas");
   canvas.width = TILE_SIZE;
@@ -71,16 +103,14 @@ export function getTileTexture(tileType: number, themeColor: string = "#6366f1")
   }
 
   const texture = Texture.from(canvas);
-  textureCache.set(cacheKey, texture);
-  return texture;
+  return setCachedTexture(cacheKey, texture);
 }
 
 // Convert PixelDoodle data into a crisp PixiJS Texture
 export function getDoodleTexture(doodle: PixelDoodle): Texture {
   const cacheKey = `doodle_${doodle.id}_${doodle.updatedAt}`;
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey)!;
-  }
+  const cached = getCachedTexture(cacheKey);
+  if (cached) return cached;
 
   const canvas = document.createElement("canvas");
   canvas.width = doodle.width;
@@ -95,16 +125,13 @@ export function getDoodleTexture(doodle: PixelDoodle): Texture {
     const paletteIndex = doodle.pixels[i];
     const hexColor = doodle.palette[paletteIndex] || DEFAULT_PALETTE[paletteIndex] || "#00000000";
 
-    // Parse hex color to RGBA
     let r = 0, g = 0, b = 0, a = 0;
     if (hexColor.length === 9 && hexColor.startsWith("#")) {
-      // #RRGGBBAA
       r = parseInt(hexColor.slice(1, 3), 16);
       g = parseInt(hexColor.slice(3, 5), 16);
       b = parseInt(hexColor.slice(5, 7), 16);
       a = parseInt(hexColor.slice(7, 9), 16);
     } else if (hexColor.length === 7 && hexColor.startsWith("#")) {
-      // #RRGGBB
       r = parseInt(hexColor.slice(1, 3), 16);
       g = parseInt(hexColor.slice(3, 5), 16);
       b = parseInt(hexColor.slice(5, 7), 16);
@@ -120,16 +147,14 @@ export function getDoodleTexture(doodle: PixelDoodle): Texture {
 
   ctx.putImageData(imgData, 0, 0);
   const texture = Texture.from(canvas);
-  textureCache.set(cacheKey, texture);
-  return texture;
+  return setCachedTexture(cacheKey, texture);
 }
 
 // Generate Player Character Sprite Texture (Retro 2D RPG Character)
 export function getPlayerTexture(): Texture {
   const cacheKey = "player_sprite_v1";
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey)!;
-  }
+  const cached = getCachedTexture(cacheKey);
+  if (cached) return cached;
 
   const canvas = document.createElement("canvas");
   canvas.width = 16;
@@ -160,16 +185,14 @@ export function getPlayerTexture(): Texture {
   ctx.fillRect(8, 13, 3, 3);
 
   const texture = Texture.from(canvas);
-  textureCache.set(cacheKey, texture);
-  return texture;
+  return setCachedTexture(cacheKey, texture);
 }
 
 // Generate Memory Block Pillar Sprite Texture
 export function getBlockPillarTexture(hasDoodle: boolean): Texture {
   const cacheKey = `block_pillar_${hasDoodle}`;
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey)!;
-  }
+  const cached = getCachedTexture(cacheKey);
+  if (cached) return cached;
 
   const canvas = document.createElement("canvas");
   canvas.width = 16;
@@ -190,6 +213,5 @@ export function getBlockPillarTexture(hasDoodle: boolean): Texture {
   ctx.fillRect(5, 5, 6, 6);
 
   const texture = Texture.from(canvas);
-  textureCache.set(cacheKey, texture);
-  return texture;
+  return setCachedTexture(cacheKey, texture);
 }

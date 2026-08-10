@@ -77,12 +77,21 @@ export class ChunkManager {
       }
     }
 
-    // Reload all blocks for active world
+    // Reload blocks belonging to active chunks only
+    const activeBlockIds = new Set<string>();
+    for (const chunk of this.activeChunks.values()) {
+      for (const id of chunk.blockIds) {
+        activeBlockIds.add(id);
+      }
+    }
+
     const allWorldBlocks = await getAllBlocks(worldId);
     this.activeBlocks.clear();
     for (const b of allWorldBlocks) {
-      const blockKey = `${b.worldId}:${b.x},${b.y}`;
-      this.activeBlocks.set(blockKey, b);
+      if (activeBlockIds.has(b.id)) {
+        const blockKey = `${b.worldId}:${b.x},${b.y}`;
+        this.activeBlocks.set(blockKey, b);
+      }
     }
 
     return {
