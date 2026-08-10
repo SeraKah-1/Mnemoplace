@@ -1,4 +1,4 @@
-import { TILE_SIZE } from "./constants";
+import { TILE_SIZE, worldPxToTile } from "./constants";
 
 export interface PlayerPosition {
   x: number; // Continuous pixel position X
@@ -98,11 +98,47 @@ export class PlayerController {
     }
 
     const clampedDelta = Math.min(delta, 1.5);
-    this.x += dx * this.speed * clampedDelta;
-    this.y += dy * this.speed * clampedDelta;
+    const moveDistX = dx * this.speed * clampedDelta;
+    const moveDistY = dy * this.speed * clampedDelta;
+
+    const nextX = this.x + moveDistX;
+    const nextY = this.y + moveDistY;
+
+    // 6px Bounding Box radius around player center
+    const radius = 5;
+
+    // Independent X-axis collision check (enables wall sliding)
+    if (this.isTileSolidFunc) {
+      const checkX = nextX + (moveDistX > 0 ? radius : -radius);
+      const tileXAtNext = worldPxToTile(checkX);
+      const tileYAtCurrent = worldPxToTile(this.y);
+      if (!this.isTileSolidFunc(tileXAtNext, tileYAtCurrent)) {
+        this.x = nextX;
+      }
+    } else {
+      this.x = nextX;
+    }
+
+    // Independent Y-axis collision check (enables wall sliding)
+    if (this.isTileSolidFunc) {
+      const checkY = nextY + (moveDistY > 0 ? radius : -radius);
+      const tileXAtCurrent = worldPxToTile(this.x);
+      const tileYAtNext = worldPxToTile(checkY);
+      if (!this.isTileSolidFunc(tileXAtCurrent, tileYAtNext)) {
+        this.y = nextY;
+      }
+    } else {
+      this.y = nextY;
+    }
 
     this.notify();
     return true;
+  }
+
+  private isTileSolidFunc?: (tileX: number, tileY: number) => boolean;
+
+  public setIsTileSolid(func: (tileX: number, tileY: number) => boolean) {
+    this.isTileSolidFunc = func;
   }
 
   public getPosition(): PlayerPosition {

@@ -218,55 +218,88 @@ export class ChunkManager {
     await saveChunk(chunk);
   }
 
+  public isTileSolid(worldId: string, tileX: number, tileY: number): boolean {
+    const cx = tileToChunkCoord(tileX);
+    const cy = tileToChunkCoord(tileY);
+    const chunkKey = getChunkKey(worldId, cx, cy);
+    const chunk = this.activeChunks.get(chunkKey);
+    if (!chunk) return false;
+
+    const localX = ((tileX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const localY = ((tileY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const tileIdx = localY * CHUNK_SIZE + localX;
+    const tileType = chunk.tiles[tileIdx] || 0;
+
+    return tileType === 5 || tileType === 6 || tileType === 7;
+  }
+
+  public getDistrictInfo(tileX: number, tileY: number): { roomName: string; districtTag: string } {
+    const cx = tileToChunkCoord(tileX);
+    const cy = tileToChunkCoord(tileY);
+
+    if (cx === 0 && cy === 0) {
+      return { roomName: "Sovereign Grand Courtyard", districtTag: "Tower Main Plaza" };
+    } else if (cy < 0 && Math.abs(cx) <= Math.abs(cy)) {
+      return { roomName: `Arcane Library Wing [Chamber ${cx},${cy}]`, districtTag: "North Academic Spire" };
+    } else if (cx > 0 && Math.abs(cy) < Math.abs(cx)) {
+      return { roomName: `Sanctuary Garden [Chamber ${cx},${cy}]`, districtTag: "East Celestial Wing" };
+    } else if (cx < 0 && Math.abs(cy) < Math.abs(cx)) {
+      return { roomName: `Dungeon Stone Vault [Chamber ${cx},${cy}]`, districtTag: "West Relic Crypt" };
+    } else {
+      return { roomName: `Observatory Deck [Chamber ${cx},${cy}]`, districtTag: "South Horizon Terrace" };
+    }
+  }
+
   private generateProceduralTerrain(cx: number, cy: number): Uint16Array {
     const tiles = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
 
-    // Hash chunk coordinate for deterministic room theme & landmark
-    const chunkSeed = (Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1);
+    // Determine room floor theme based on quadrant coordinates
+    let floorTile = 1; // Default Cobblestone
+    let wallTile = 5; // Default Solid Stone Wall
+
+    if (cx === 0 && cy === 0) {
+      floorTile = 1; // Grand Courtyard: Cobblestone
+      wallTile = 7; // Obsidian Pillars
+    } else if (cy < 0 && Math.abs(cx) <= Math.abs(cy)) {
+      floorTile = 4; // Library: Wood Planks
+      wallTile = 6; // Wood Fences
+    } else if (cx > 0 && Math.abs(cy) < Math.abs(cx)) {
+      floorTile = 0; // Garden: Grass
+      wallTile = 5; // Stone Walls
+    } else if (cx < 0 && Math.abs(cy) < Math.abs(cx)) {
+      floorTile = 2; // Vault: Dungeon Stone
+      wallTile = 5; // Stone Walls
+    } else {
+      floorTile = 3; // Observatory: Rune Floor
+      wallTile = 7; // Obsidian Pillars
+    }
 
     for (let localY = 0; localY < CHUNK_SIZE; localY++) {
       for (let localX = 0; localX < CHUNK_SIZE; localX++) {
         const tileIdx = localY * CHUNK_SIZE + localX;
+        const isNorthWall = localY === 0;
+        const isSouthWall = localY === CHUNK_SIZE - 1;
+        const isWestWall = localX === 0;
+        const isEastWall = localX === CHUNK_SIZE - 1;
+        const isWallBoundary = isNorthWall || isSouthWall || isWestWall || isEastWall;
 
-        const isOuterWall = localX === 0 || localX === CHUNK_SIZE - 1 || localY === 0 || localY === CHUNK_SIZE - 1;
-        const isDoorway = isOuterWall && (localX === 7 || localX === 8 || localY === 7 || localY === 8);
-        const isCorridor = localX === 7 || localX === 8 || localY === 7 || localY === 8;
+        // 4-Tile Wide Doorway Passageways in the center of each wall (local 6..9)
+        const isDoorwayX = localX >= 6 && localX <= 9;
+        const isDoorwayY = localY >= 6 && localY <= 9;
+        const isDoorway = (isNorthWall || isSouthWall) ? isDoorwayX : (isWestWall || isEastWall) ? isDoorwayY : false;
 
-        // 1. Doorways & Corridors -> Paved Cobblestone Path (Tile Type 1)
-        if (isDoorway || (isCorridor && !isOuterWall)) {
-          tiles[tileIdx] = 1;
-          continue;
-        }
-
-        // 2. Room Outer Perimeter Walls -> Stone Pillars (Tile Type 2)
-        if (isOuterWall) {
-          tiles[tileIdx] = 2;
-          continue;
-        }
-
-        // 3. Central Unique Memory Landmark per Room Chamber
-        const isCenterLandmark = localX >= 6 && localX <= 9 && localY >= 6 && localY <= 9;
-
-        if (isCenterLandmark) {
-          if (cx === 0 && cy === 0) {
-            tiles[tileIdx] = 3; // Grand Spire Altar Rune Circle
-          } else if (chunkSeed > 0.7) {
-            tiles[tileIdx] = 3; // Arcane Rune Sanctum
-          } else if (chunkSeed > 0.4) {
-            tiles[tileIdx] = 2; // Stone Relic Vault
-          } else {
-            tiles[tileIdx] = 4; // Wooden Reading Podium
-          }
-          continue;
-        }
-
-        // 4. Room Floor Interior (Theme per Chamber)
-        if (chunkSeed > 0.6) {
-          tiles[tileIdx] = 4; // Wooden Decking Room
-        } else if (chunkSeed > 0.3) {
-          tiles[tileIdx] = 0; // Courtyard Garden Room
+        if (isWallBoundary && !isDoorway) {
+          tiles[tileIdx] = wallTile; // Solid Collision Wall
         } else {
-          tiles[tileIdx] = 1; // Cobblestone Plaza Room
+          // Inner Room Floor Patterns & Center Landmark Altar
+          const isCenterAltar = (localX >= 7 && localX <= 8) && (localY >= 7 && localY <= 8);
+          if (isCenterAltar) {
+            tiles[tileIdx] = 3; // Rune Sanctum Centerpiece
+          } else if (isDoorway) {
+            tiles[tileIdx] = 1; // Cobblestone Door Threshold
+          } else {
+            tiles[tileIdx] = floorTile;
+          }
         }
       }
     }

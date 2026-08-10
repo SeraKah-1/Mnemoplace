@@ -51,16 +51,14 @@ export function getTileTexture(tileType: number, themeColor: string = "#6366f1")
     ctx.imageSmoothingEnabled = false;
 
     if (tileType === 0) {
-      // Baseline Continuous Grass Surface (No grid seams)
+      // Baseline Continuous Grass Surface
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-
-      // Subtle pixel detail
       ctx.fillStyle = "#1e293b";
       ctx.fillRect(3, 4, 2, 2);
       ctx.fillRect(10, 11, 2, 2);
     } else if (tileType === 1) {
-      // Stone Path
+      // Cobblestone Path
       ctx.fillStyle = "#334155";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
       ctx.fillStyle = "#475569";
@@ -70,19 +68,21 @@ export function getTileTexture(tileType: number, themeColor: string = "#6366f1")
       ctx.fillRect(0, 0, TILE_SIZE, 1);
       ctx.fillRect(0, 15, TILE_SIZE, 1);
     } else if (tileType === 2) {
-      // Tile Floor
+      // Dungeon Stone Floor
       ctx.fillStyle = "#1e1b4b";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
       ctx.strokeStyle = "#4338ca";
       ctx.lineWidth = 1;
       ctx.strokeRect(0.5, 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
     } else if (tileType === 3) {
-      // Memory Portal / Red String Anchor
-      ctx.fillStyle = "#450a0a";
+      // Rune Sanctum Floor
+      ctx.fillStyle = "#312e81";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-      ctx.fillStyle = "#ef4444";
+      ctx.fillStyle = "#818cf8";
       ctx.fillRect(4, 4, 8, 8);
-    } else {
+      ctx.fillStyle = "#e0e7ff";
+      ctx.fillRect(7, 7, 2, 2);
+    } else if (tileType === 4) {
       // Wood Deck
       ctx.fillStyle = "#78350f";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
@@ -90,6 +90,36 @@ export function getTileTexture(tileType: number, themeColor: string = "#6366f1")
       ctx.fillRect(0, 1, TILE_SIZE, 3);
       ctx.fillRect(0, 6, TILE_SIZE, 3);
       ctx.fillRect(0, 11, TILE_SIZE, 3);
+    } else if (tileType === 5) {
+      // SOLID STONE WALL (Collision) - 3D Beveled Brick Relief
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(1, 1, 14, 2); // Top Highlight
+      ctx.fillRect(1, 1, 2, 14); // Left Highlight
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(1, 13, 14, 2); // Bottom Shadow
+      ctx.fillRect(13, 1, 2, 14); // Right Shadow
+    } else if (tileType === 6) {
+      // SOLID WOODEN FENCE/WALL (Collision) - Log Posts & Iron Studs
+      ctx.fillStyle = "#451a03";
+      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(2, 2, 12, 12);
+      ctx.fillStyle = "#d97706";
+      ctx.fillRect(4, 4, 3, 3);
+      ctx.fillRect(9, 9, 3, 3);
+    } else if (tileType === 7) {
+      // SOLID OBSIDIAN PILLAR (Collision) - Glowing Runes
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = "#581c87";
+      ctx.fillRect(1, 1, 14, 14);
+      ctx.fillStyle = "#c084fc";
+      ctx.fillRect(6, 2, 4, 12);
+      ctx.fillRect(2, 6, 12, 4);
     }
 
     const texture = Texture.from(canvas);

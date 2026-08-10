@@ -24,8 +24,11 @@ export const TILE_BLOCK_TYPES = [
   { id: 0, name: "Grass", icon: "🌿", color: "bg-emerald-900 border-emerald-500" },
   { id: 1, name: "Cobble", icon: "🪨", color: "bg-slate-800 border-slate-500" },
   { id: 2, name: "Stone", icon: "🏛️", color: "bg-indigo-900 border-indigo-500" },
-  { id: 3, name: "Rune", icon: "🔮", color: "bg-rose-950 border-rose-500" },
+  { id: 3, name: "Rune", icon: "🔮", color: "bg-purple-950 border-purple-500" },
   { id: 4, name: "Wood", icon: "🪵", color: "bg-amber-900 border-amber-500" },
+  { id: 5, name: "Stone Wall", icon: "🧱", color: "bg-slate-900 border-slate-400 font-bold" },
+  { id: 6, name: "Wood Fence", icon: "🪵", color: "bg-amber-950 border-amber-600 font-bold" },
+  { id: 7, name: "Obsidian Pillar", icon: "🔮", color: "bg-purple-900 border-purple-400 font-bold" },
 ];
 
 export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({

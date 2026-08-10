@@ -142,10 +142,19 @@ export default function App() {
 
       if (e.code === "KeyE" || (e.code === "Space" && !e.repeat)) {
         e.preventDefault();
-        const existing = chunkManager.getBlockAt(activeWorld?.id || "", playerPosition.tileX, playerPosition.tileY);
-        setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
-        setEditingBlock(existing || null);
-        setShowBlockModal(true);
+        if (buildModeRef.current) {
+          // BUILD MODE ACTIVE: Paint selected block tile at player position
+          if (activeWorld) {
+            await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, selectedTileTypeRef.current);
+            await pixiApp.refreshWorld(true);
+          }
+        } else {
+          // NORMAL MODE ACTIVE: Open Memory Anchor Modal
+          const existing = chunkManager.getBlockAt(activeWorld?.id || "", playerPosition.tileX, playerPosition.tileY);
+          setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
+          setEditingBlock(existing || null);
+          setShowBlockModal(true);
+        }
       } else if (e.code === "Delete" || e.code === "Backspace" || e.code === "KeyX") {
         e.preventDefault();
         if (activeWorld) {

@@ -23,14 +23,19 @@ export const DEFAULT_PALETTE = [
   "#1d4ed8", // 15: Dark Blue
 ];
 
-// Ground tile types: 0 = Grass Baseline, 1 = Stone Path, 2 = Tile Floor, 3 = Water Edge, 4 = Wood Deck
+// Ground tile types: Walkable floors vs Solid collision walls
 export const TILE_TYPES = {
-  GRASS: 0,
-  PATH: 1,
-  TILE_FLOOR: 2,
-  WATER: 3,
-  WOOD: 4,
+  GRASS: 0, // Walkable
+  PATH: 1, // Walkable (Cobblestone)
+  TILE_FLOOR: 2, // Walkable (Dungeon Stone)
+  RUNE_FLOOR: 3, // Walkable (Rune Sanctum)
+  WOOD: 4, // Walkable (Wood Deck)
+  WALL_STONE: 5, // SOLID WALL (Collision)
+  WALL_WOOD: 6, // SOLID WALL (Collision)
+  WALL_OBSIDIAN: 7, // SOLID WALL (Collision)
 } as const;
+
+export const SOLID_TILE_TYPES = new Set<number>([5, 6, 7]);
 
 export function tileToWorldPx(tilePos: number): number {
   return tilePos * TILE_SIZE;

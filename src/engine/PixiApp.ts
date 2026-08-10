@@ -125,6 +125,7 @@ export class PixiApp {
   public async setWorld(worldId: string, themeColor: string, spawnX = 0, spawnY = 0): Promise<void> {
     this.currentWorldId = worldId;
     this.currentThemeColor = themeColor;
+    this.playerController.setIsTileSolid((tx, ty) => chunkManager.isTileSolid(this.currentWorldId, tx, ty));
     this.playerController.setPosition(tileToWorldPx(spawnX) + TILE_SIZE / 2, tileToWorldPx(spawnY) + TILE_SIZE / 2);
     await this.refreshWorld(true);
   }

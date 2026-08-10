@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { MemoryBlock, PixelDoodle } from "../domain/types";
 import { pixiApp } from "../engine/PixiApp";
 import { PlayerPosition } from "../engine/PlayerController";
-import { Eye, Sparkles, HelpCircle } from "lucide-react";
+import { chunkManager } from "../engine/ChunkManager";
+import { Eye, Sparkles, HelpCircle, MapPin } from "lucide-react";
 import { getDoodleById } from "../domain/db";
 
 interface ProximityPopupProps {
@@ -24,6 +25,8 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   const [doodle, setDoodle] = useState<PixelDoodle | null>(null);
   const [screenPos, setScreenPos] = useState<{ x: number; y: number } | null>(null);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
+
+  const district = chunkManager.getDistrictInfo(playerPosition.tileX, playerPosition.tileY);
 
   // Hysteresis threshold logic: active < 2.5 tiles, inactive > 3.5 tiles
   useEffect(() => {
@@ -80,20 +83,33 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setScreenPos(pos);
   }, [activeBlock, playerPosition]);
 
-  if (!activeBlock || !screenPos) return null;
-
   const showContent = studyMode || isRevealed;
 
   return (
-    <div
-      style={{
-        left: `${screenPos.x}px`,
-        top: `${screenPos.y - 70}px`,
-        transform: "translate(-50%, -100%)",
-      }}
-      className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
-      onClick={() => onOpenBlock(activeBlock)}
-    >
+    <>
+      {/* Permanent District Landmark Location Banner */}
+      <div className="fixed top-16 left-4 z-30 pointer-events-none jrpg-box px-3 py-1.5 flex items-center gap-2 animate-fade-in shadow-xl">
+        <MapPin className="w-4 h-4 text-amber-400 animate-bounce flex-shrink-0" />
+        <div>
+          <div className="text-[8px] font-pixel font-bold text-amber-300 tracking-wider">
+            {district.districtTag.toUpperCase()}
+          </div>
+          <div className="text-[10px] font-pixel text-slate-100 font-bold">
+            {district.roomName}
+          </div>
+        </div>
+      </div>
+
+      {activeBlock && screenPos && (
+        <div
+          style={{
+            left: `${screenPos.x}px`,
+            top: `${screenPos.y - 70}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+          className="fixed z-40 pointer-events-auto cursor-pointer animate-fade-in"
+          onClick={() => onOpenBlock(activeBlock)}
+        >
       <div className="jrpg-box p-3.5 text-slate-100 max-w-xs flex flex-col gap-2 relative group hover:border-amber-400 transition-all">
         <div className="relative z-10 flex items-start gap-3">
           {/* Hand-drawn Pixel Doodle Cue */}
@@ -154,9 +170,11 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
           </span>
           <span className="text-slate-400 font-mono">DUE: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
         </div>
+        </div>
       </div>
-    </div>
-  );
+    )}
+  </>
+);
 };
 
 // Helper component to render small canvas preview of PixelDoodle
