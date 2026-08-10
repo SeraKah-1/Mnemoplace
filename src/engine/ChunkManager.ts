@@ -47,9 +47,8 @@ export class ChunkManager {
         if (!this.activeChunks.has(key)) {
           let chunk = await getChunk(key);
           if (!chunk) {
-            // Generate sparse empty chunk on the fly
+            // Generate sparse empty chunk in memory (do not write empty grass chunks to DB)
             const tiles = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
-            // Default grass (0)
             tiles.fill(0);
 
             chunk = {
@@ -61,7 +60,6 @@ export class ChunkManager {
               blockIds: [],
               updatedAt: Date.now(),
             };
-            await saveChunk(chunk);
           }
           this.activeChunks.set(key, chunk);
         }
@@ -126,6 +124,26 @@ export class ChunkManager {
     }
   }
 
+  public async removeBlockById(blockId: string): Promise<boolean> {
+    let targetBlock: MemoryBlock | null = null;
+    for (const b of this.activeBlocks.values()) {
+      if (b.id === blockId) {
+        targetBlock = b;
+        break;
+      }
+    }
+
+    if (!targetBlock) {
+      // Fetch from DB if not in active map
+      const allBlocks = await getAllBlocks();
+      targetBlock = allBlocks.find((b) => b.id === blockId) || null;
+    }
+
+    if (!targetBlock) return false;
+
+    return this.removeBlockAt(targetBlock.worldId, targetBlock.x, targetBlock.y);
+  }
+
   public async removeBlockAt(worldId: string, tileX: number, tileY: number): Promise<boolean> {
     const blockKey = `${worldId}:${tileX},${tileY}`;
     const block = this.activeBlocks.get(blockKey);
@@ -137,10 +155,13 @@ export class ChunkManager {
     const cx = tileToChunkCoord(tileX);
     const cy = tileToChunkCoord(tileY);
     const chunkKey = getChunkKey(worldId, cx, cy);
-    const chunk = this.activeChunks.get(chunkKey);
+    let chunk = this.activeChunks.get(chunkKey);
+    if (!chunk) {
+      chunk = await getChunk(chunkKey);
+    }
     if (chunk) {
       chunk.blockIds = chunk.blockIds.filter((id) => id !== block.id);
-      this.dirtyChunkKeys.add(chunkKey);
+      await saveChunk(chunk);
     }
 
     return true;

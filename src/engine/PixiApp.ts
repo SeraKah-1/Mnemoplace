@@ -1,5 +1,5 @@
 import { Application, Container, Sprite, Text, TextStyle } from "pixi.js";
-import { TILE_SIZE, CHUNK_SIZE, worldPxToTile, tileToWorldPx } from "./constants";
+import { TILE_SIZE, CHUNK_SIZE, worldPxToTile, tileToWorldPx, tileToChunkCoord } from "./constants";
 import { getTileTexture, getDoodleTexture, getPlayerTexture, getBlockPillarTexture, clearTextureCache } from "./TextureCache";
 import { chunkManager } from "./ChunkManager";
 import { PlayerController, PlayerPosition } from "./PlayerController";
@@ -102,20 +102,38 @@ export class PixiApp {
     }
   }
 
+  private currentChunkCx: number = Infinity;
+  private currentChunkCy: number = Infinity;
+  private renderGen: number = 0;
+
   public async setWorld(worldId: string, themeColor: string, spawnX = 0, spawnY = 0): Promise<void> {
     this.currentWorldId = worldId;
     this.currentThemeColor = themeColor;
     this.playerController.setPosition(tileToWorldPx(spawnX) + TILE_SIZE / 2, tileToWorldPx(spawnY) + TILE_SIZE / 2);
-    await this.refreshWorld();
+    await this.refreshWorld(true);
   }
 
-  public async refreshWorld(): Promise<void> {
+  public async refreshWorld(force: boolean = false): Promise<void> {
     const playerPos = this.playerController.getPosition();
-    const { loadedChunkKeys, blocks } = await chunkManager.loadActiveChunksAround(
+    const playerCx = tileToChunkCoord(playerPos.tileX);
+    const playerCy = tileToChunkCoord(playerPos.tileY);
+
+    if (!force && playerCx === this.currentChunkCx && playerCy === this.currentChunkCy) {
+      return;
+    }
+
+    this.currentChunkCx = playerCx;
+    this.currentChunkCy = playerCy;
+
+    const currentGen = ++this.renderGen;
+
+    const { blocks } = await chunkManager.loadActiveChunksAround(
       this.currentWorldId,
       playerPos.tileX,
       playerPos.tileY
     );
+
+    if (currentGen !== this.renderGen) return;
 
     this.renderChunks();
     this.renderBlocks(blocks);
@@ -126,7 +144,7 @@ export class PixiApp {
       this.currentWorldId = worldId;
     }
     this.playerController.setPosition(tileToWorldPx(tileX) + TILE_SIZE / 2, tileToWorldPx(tileY) + TILE_SIZE / 2);
-    await this.refreshWorld();
+    await this.refreshWorld(true);
   }
 
   private renderChunks() {

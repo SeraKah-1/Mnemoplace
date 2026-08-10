@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { AppMeta, WorldFolder, MemoryBlock } from "./domain/types";
-import { getAppMeta, updateActiveWorld, getAllWorlds, getAllBlocks, saveBlock, deleteBlock } from "./domain/db";
+import { getAppMeta, updateActiveWorld, getAllWorlds, getAllBlocks, saveBlock, deleteBlock, saveWorld } from "./domain/db";
 import { pixiApp } from "./engine/PixiApp";
+import { chunkManager } from "./engine/ChunkManager";
 import { PlayerPosition } from "./engine/PlayerController";
 import { ProximityPopup } from "./components/ProximityPopup";
 import { BlockModal } from "./components/BlockModal";
@@ -73,8 +74,13 @@ export default function App() {
     pixiApp.init(containerRef.current).then(() => {
       if (!isMounted) return;
 
+      let lastMoveTime = 0;
       pixiApp.setOnPlayerMove((pos) => {
-        setPlayerPosition(pos);
+        const now = Date.now();
+        if (now - lastMoveTime >= 100) {
+          lastMoveTime = now;
+          setPlayerPosition(pos);
+        }
       });
 
       pixiApp.setOnTileClick((tileX, tileY, existingBlock) => {
@@ -96,6 +102,25 @@ export default function App() {
     };
   }, [refreshDatabase]);
 
+  // Debounce autosave player position to active world
+  useEffect(() => {
+    if (!activeWorld) return;
+
+    const timer = setTimeout(() => {
+      if (activeWorld.spawnX !== playerPosition.tileX || activeWorld.spawnY !== playerPosition.tileY) {
+        const updatedWorld = {
+          ...activeWorld,
+          spawnX: playerPosition.tileX,
+          spawnY: playerPosition.tileY,
+          updatedAt: Date.now(),
+        };
+        saveWorld(updatedWorld);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [playerPosition.tileX, playerPosition.tileY, activeWorld]);
+
   // World Switching
   const handleSelectWorld = async (worldId: string) => {
     await updateActiveWorld(worldId);
@@ -111,9 +136,9 @@ export default function App() {
 
   // Block Modal Save / Delete
   const handleSaveBlock = async (block: MemoryBlock) => {
-    await saveBlock(block);
+    await chunkManager.createOrUpdateBlock(block);
     await pixiApp.reloadDoodlesCache();
-    await pixiApp.refreshWorld();
+    await pixiApp.refreshWorld(true);
 
     const updatedBlocks = await getAllBlocks();
     setBlocks(updatedBlocks);
@@ -121,8 +146,9 @@ export default function App() {
   };
 
   const handleDeleteBlock = async (blockId: string) => {
-    await deleteBlock(blockId);
-    await pixiApp.refreshWorld();
+    await chunkManager.removeBlockById(blockId);
+    await pixiApp.reloadDoodlesCache();
+    await pixiApp.refreshWorld(true);
 
     const updatedBlocks = await getAllBlocks();
     setBlocks(updatedBlocks);
@@ -135,6 +161,9 @@ export default function App() {
       await handleSelectWorld(worldId);
     }
     await pixiApp.teleportToTile(worldId, tileX, tileY);
+    setShowJournal(false);
+    setShowReview(false);
+    setShowMinimap(false);
   };
 
   const dueBlocksCount = blocks.filter((b) => b.srs.due <= Date.now()).length;

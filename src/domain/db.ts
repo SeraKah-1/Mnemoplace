@@ -185,17 +185,27 @@ export async function saveDoodle(doodle: PixelDoodle): Promise<void> {
 }
 
 // ─── Full Data Backup Export / Import ───
+export interface SerializedChunkData {
+  key: string;
+  worldId: string;
+  cx: number;
+  cy: number;
+  tiles: number[];
+  blockIds: string[];
+  updatedAt: number;
+}
+
 export interface DatabaseBackup {
   meta: AppMeta;
   worlds: WorldFolder[];
-  chunks: ChunkData[];
+  chunks: SerializedChunkData[];
   blocks: MemoryBlock[];
   doodles: {
     id: string;
     width: number;
     height: number;
     palette: string[];
-    pixels: number[]; // Serialized from Uint8Array for JSON
+    pixels: number[];
     createdAt: number;
     updatedAt: number;
   }[];
@@ -206,9 +216,14 @@ export async function exportFullDatabase(): Promise<DatabaseBackup> {
   const db = await getDB();
   const meta = await getAppMeta();
   const worlds = await db.getAll("worlds");
-  const chunks = await db.getAll("chunks");
+  const rawChunks = await db.getAll("chunks");
   const blocks = await db.getAll("blocks");
   const rawDoodles = await db.getAll("doodles");
+
+  const chunks: SerializedChunkData[] = rawChunks.map((c: ChunkData) => ({
+    ...c,
+    tiles: Array.from(c.tiles),
+  }));
 
   const doodles = rawDoodles.map((d: PixelDoodle) => ({
     id: d.id,
@@ -245,16 +260,30 @@ export async function importFullDatabase(backup: DatabaseBackup): Promise<void> 
   for (const w of backup.worlds) {
     await tx.objectStore("worlds").put(w);
   }
+
   for (const c of backup.chunks) {
+    let tilesArray: Uint16Array;
+    if (Array.isArray(c.tiles)) {
+      tilesArray = new Uint16Array(c.tiles);
+    } else if (c.tiles && typeof c.tiles === "object") {
+      const keys = Object.keys(c.tiles).map(Number).sort((a, b) => a - b);
+      const values = keys.map((k) => (c.tiles as any)[k]);
+      tilesArray = new Uint16Array(values);
+    } else {
+      tilesArray = new Uint16Array(256);
+    }
+
     const chunkData: ChunkData = {
       ...c,
-      tiles: c.tiles instanceof Uint16Array ? c.tiles : new Uint16Array(c.tiles),
+      tiles: tilesArray,
     };
     await tx.objectStore("chunks").put(chunkData);
   }
+
   for (const b of backup.blocks) {
     await tx.objectStore("blocks").put(b);
   }
+
   for (const d of backup.doodles) {
     const pixelDoodle: PixelDoodle = {
       id: d.id,

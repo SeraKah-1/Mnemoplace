@@ -52,6 +52,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({ onDatabaseImported, on
     } catch (err: any) {
       console.error("Import failed:", err);
       alert(`Failed to import backup: ${err.message || err}`);
+    } finally {
+      e.target.value = "";
     }
   };
 

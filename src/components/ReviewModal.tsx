@@ -17,10 +17,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   onTeleportToBlock,
   onClose,
 }) => {
-  // Filter due blocks
+  // Filter due blocks for pure FSRS scheduling
   const now = Date.now();
   const dueBlocks = blocks.filter((b) => b.srs.due <= now);
-  const reviewQueue = dueBlocks.length > 0 ? dueBlocks : blocks; // Fall back to all blocks if non-due
+  const reviewQueue = dueBlocks;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
