@@ -220,28 +220,53 @@ export class ChunkManager {
 
   private generateProceduralTerrain(cx: number, cy: number): Uint16Array {
     const tiles = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE);
+
+    // Hash chunk coordinate for deterministic room theme & landmark
+    const chunkSeed = (Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1);
+
     for (let localY = 0; localY < CHUNK_SIZE; localY++) {
       for (let localX = 0; localX < CHUNK_SIZE; localX++) {
-        const globalX = cx * CHUNK_SIZE + localX;
-        const globalY = cy * CHUNK_SIZE + localY;
         const tileIdx = localY * CHUNK_SIZE + localX;
 
-        // Cobblestone Main Roads at 16-tile intervals
-        if (Math.abs(globalX) % 16 === 0 || Math.abs(globalY) % 16 === 0) {
-          tiles[tileIdx] = 1; // Cobblestone Path
-        } else {
-          const hash = Math.sin(globalX * 12.9898 + globalY * 78.233) * 43758.5453;
-          const val = hash - Math.floor(hash);
+        const isOuterWall = localX === 0 || localX === CHUNK_SIZE - 1 || localY === 0 || localY === CHUNK_SIZE - 1;
+        const isDoorway = isOuterWall && (localX === 7 || localX === 8 || localY === 7 || localY === 8);
+        const isCorridor = localX === 7 || localX === 8 || localY === 7 || localY === 8;
 
-          if (val > 0.88) {
-            tiles[tileIdx] = 4; // Wood Deck Planks
-          } else if (val > 0.76) {
-            tiles[tileIdx] = 2; // Dungeon Stone Floor
-          } else if (val > 0.72) {
-            tiles[tileIdx] = 3; // Memory Portal Rune
+        // 1. Doorways & Corridors -> Paved Cobblestone Path (Tile Type 1)
+        if (isDoorway || (isCorridor && !isOuterWall)) {
+          tiles[tileIdx] = 1;
+          continue;
+        }
+
+        // 2. Room Outer Perimeter Walls -> Stone Pillars (Tile Type 2)
+        if (isOuterWall) {
+          tiles[tileIdx] = 2;
+          continue;
+        }
+
+        // 3. Central Unique Memory Landmark per Room Chamber
+        const isCenterLandmark = localX >= 6 && localX <= 9 && localY >= 6 && localY <= 9;
+
+        if (isCenterLandmark) {
+          if (cx === 0 && cy === 0) {
+            tiles[tileIdx] = 3; // Grand Spire Altar Rune Circle
+          } else if (chunkSeed > 0.7) {
+            tiles[tileIdx] = 3; // Arcane Rune Sanctum
+          } else if (chunkSeed > 0.4) {
+            tiles[tileIdx] = 2; // Stone Relic Vault
           } else {
-            tiles[tileIdx] = 0; // Baseline Grass
+            tiles[tileIdx] = 4; // Wooden Reading Podium
           }
+          continue;
+        }
+
+        // 4. Room Floor Interior (Theme per Chamber)
+        if (chunkSeed > 0.6) {
+          tiles[tileIdx] = 4; // Wooden Decking Room
+        } else if (chunkSeed > 0.3) {
+          tiles[tileIdx] = 0; // Courtyard Garden Room
+        } else {
+          tiles[tileIdx] = 1; // Cobblestone Plaza Room
         }
       }
     }
