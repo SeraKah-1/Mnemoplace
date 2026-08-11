@@ -276,8 +276,8 @@ export default function App() {
       let minDistance = Infinity;
       for (const b of blocks) {
         if (b.worldId !== curWorld.id) continue;
-        let bPxX = b.pinX !== undefined ? (b.pinX / 100) * dims.width : b.x * 32 + 16;
-        let bPxY = b.pinY !== undefined ? (b.pinY / 100) * dims.height : b.y * 32 + 16;
+        let bPxX = b.pinX !== undefined ? (b.pinX / 100) * dims.width : b.x * 16 + 8;
+        let bPxY = b.pinY !== undefined ? (b.pinY / 100) * dims.height : b.y * 16 + 8;
         const dist = Math.hypot(curPos.x - bPxX, curPos.y - bPxY);
         if (dist <= 120 && dist < minDistance) {
           minDistance = dist;
@@ -402,7 +402,11 @@ export default function App() {
         onOpenBackup={() => setShowBackup(true)}
         onOpenSync={() => setShowSync(true)}
         onUpdateMapScale={handleUpdateMapScale}
-        onPlaceAnchorClick={() => {
+        onPlaceAnchorClick={async () => {
+          if (buildMode && activeWorld) {
+            await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, selectedTileType);
+            return;
+          }
           if (activeWorld?.mapImageUrl) {
             const dims = pixiApp.getMapDimensions();
             const curPos = pixiApp.getPlayerController().getPosition();

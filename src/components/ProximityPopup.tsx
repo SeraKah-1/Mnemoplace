@@ -67,9 +67,9 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
         bPxX = (b.pinX / 100) * dims.width;
         bPxY = (b.pinY / 100) * dims.height;
       } else {
-        // 2D Tile Grid Tile calculation
-        bPxX = b.x * 32 + 16;
-        bPxY = b.y * 32 + 16;
+        // 2D Tile Grid Tile calculation (16px tile size)
+        bPxX = b.x * 16 + 8;
+        bPxY = b.y * 16 + 8;
       }
 
       const dist = Math.hypot(playerPosition.x - bPxX, playerPosition.y - bPxY);
@@ -83,10 +83,10 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     if (activeBlock) {
       let activePxX = (isImageMap && activeBlock.pinX !== undefined && activeBlock.pinY !== undefined)
         ? (activeBlock.pinX / 100) * dims.width
-        : activeBlock.x * 32 + 16;
+        : activeBlock.x * 16 + 8;
       let activePxY = (isImageMap && activeBlock.pinX !== undefined && activeBlock.pinY !== undefined)
         ? (activeBlock.pinY / 100) * dims.height
-        : activeBlock.y * 32 + 16;
+        : activeBlock.y * 16 + 8;
 
       const currentDist = Math.hypot(playerPosition.x - activePxX, playerPosition.y - activePxY);
 

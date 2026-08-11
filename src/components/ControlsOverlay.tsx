@@ -10,6 +10,7 @@ import {
   Hammer,
   Trash2,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { WorldFolder } from "../domain/types";
 
@@ -415,15 +416,15 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
             {/* controller body pill */}
             <div className="absolute inset-4 bg-slate-800/70 border border-slate-600 rounded-full" />
 
-            {/* Y — top: ANCHOR / PLACE */}
+            {/* Y — top: ANCHOR / BUILD TILE */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2">
               <FaceBtn
-                label="ANCHOR"
-                icon={<Plus className="w-4 h-4" />}
-                color="border-amber-400 text-amber-300"
-                bgColor="bg-amber-900"
+                label={buildMode ? "PAINT" : "ANCHOR"}
+                icon={buildMode ? <Sparkles className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                color={buildMode ? "border-emerald-400 text-emerald-300" : "border-amber-400 text-amber-300"}
+                bgColor={buildMode ? "bg-emerald-900" : "bg-amber-900"}
                 onClick={onPlaceAnchorClick}
-                title="Place Anchor (E)"
+                title={buildMode ? "Paint Selected Tile" : "Place Anchor (E)"}
               />
             </div>
 

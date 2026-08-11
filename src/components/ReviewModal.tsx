@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MemoryBlock, PixelDoodle, ReviewRating } from "../domain/types";
 import { processSRSReview } from "../domain/fsrs";
 import { saveBlock, getDoodleById } from "../domain/db";
-import { Brain, CheckCircle2, RotateCcw, Eye, Sparkles, Navigation, X } from "lucide-react";
+import { Brain, CheckCircle2, Eye, Sparkles, Navigation, X, ThumbsUp, ThumbsDown, HelpCircle, Zap } from "lucide-react";
 
 interface ReviewModalProps {
   blocks: MemoryBlock[];
@@ -17,7 +17,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   onTeleportToBlock,
   onClose,
 }) => {
-  // Freeze review queue upon modal initialization so state updates do not shrink queue during session
+  // Freeze review queue upon modal initialization
   const [reviewQueue] = useState<MemoryBlock[]>(() => {
     const now = Date.now();
     return blocks.filter((b) => b.srs.due <= now);
@@ -27,7 +27,14 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [doodle, setDoodle] = useState<PixelDoodle | null>(null);
 
+  // Swipe Gesture State
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<"right" | "left" | "up" | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
   const currentBlock = reviewQueue[currentIndex] || null;
+  const nextBlock = reviewQueue[currentIndex + 1] || null;
 
   useEffect(() => {
     if (currentBlock?.doodleId) {
@@ -36,18 +43,20 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
       setDoodle(null);
     }
     setIsAnswerRevealed(false);
+    setDragOffset({ x: 0, y: 0 });
+    setSwipeDirection(null);
   }, [currentBlock]);
 
   if (!currentBlock) {
     return (
       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="jrpg-box-gold p-6 w-full max-w-md text-center text-slate-100 flex flex-col items-center gap-4">
-          <CheckCircle2 className="w-14 h-14 text-emerald-400 animate-bounce" />
-          <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300">ALL REVIEWS COMPLETE!</h2>
-          <p className="text-[10px] font-pixel text-slate-300">Your memory consolidation schedule is up to date.</p>
+        <div className="jrpg-box-gold p-6 w-full max-w-md text-center text-slate-100 flex flex-col items-center gap-4 animate-scale-up">
+          <CheckCircle2 className="w-16 h-16 text-emerald-400 animate-bounce" />
+          <h2 className="text-sm font-pixel font-bold text-amber-300">ALL REVIEWS COMPLETE!</h2>
+          <p className="text-xs font-pixel text-slate-300">Your memory consolidation schedule is 100% up to date.</p>
           <button
             onClick={onClose}
-            className="jrpg-btn px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-pixel rounded"
+            className="jrpg-btn px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-pixel rounded-xl shadow-lg"
           >
             RETURN TO PALACE
           </button>
@@ -56,7 +65,12 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     );
   }
 
-  const handleRating = async (rating: ReviewRating) => {
+  const handleRating = async (rating: ReviewRating, animDirection?: "right" | "left" | "up") => {
+    if (animDirection) {
+      setSwipeDirection(animDirection);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
     const updatedSRS = processSRSReview(currentBlock.srs, rating);
     const updatedBlock: MemoryBlock = {
       ...currentBlock,
@@ -67,6 +81,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     await saveBlock(updatedBlock);
     onUpdateBlock(updatedBlock);
 
+    setDragOffset({ x: 0, y: 0 });
+    setSwipeDirection(null);
+
     if (currentIndex < reviewQueue.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setIsAnswerRevealed(false);
@@ -75,17 +92,75 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   };
 
+  // Pointer / Touch Swipe Event Handlers
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsSwiping(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isSwiping) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setDragOffset({ x: dx, y: dy });
+
+    // Determine visual hint direction
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 40) setSwipeDirection("right");
+      else if (dx < -40) setSwipeDirection("left");
+      else setSwipeDirection(null);
+    } else {
+      if (dy < -40) setSwipeDirection("up");
+      else setSwipeDirection(null);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isSwiping) return;
+    setIsSwiping(false);
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (_) {}
+
+    const SWIPE_THRESHOLD = 90;
+
+    if (Math.abs(dragOffset.x) > Math.abs(dragOffset.y)) {
+      if (dragOffset.x > SWIPE_THRESHOLD) {
+        // Swipe RIGHT -> INGAT (Good / Rating 3)
+        handleRating(3, "right");
+        return;
+      } else if (dragOffset.x < -SWIPE_THRESHOLD) {
+        // Swipe LEFT -> LUPA (Again / Rating 1)
+        handleRating(1, "left");
+        return;
+      }
+    } else {
+      if (dragOffset.y < -SWIPE_THRESHOLD) {
+        // Swipe UP -> RAGU-RAGU (Hard / Rating 2)
+        handleRating(2, "up");
+        return;
+      }
+    }
+
+    // Reset position if threshold not reached
+    setDragOffset({ x: 0, y: 0 });
+    setSwipeDirection(null);
+  };
+
+  const rotationDeg = dragOffset.x * 0.08;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div className="jrpg-box-gold p-5 sm:p-6 w-full max-w-lg flex flex-col gap-4 text-slate-100 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none">
+      <div className="jrpg-box-gold p-4 sm:p-6 w-full max-w-md flex flex-col gap-4 text-slate-100 animate-fade-in relative">
         {/* Header */}
-        <div className="flex justify-between items-center border-b-2 border-amber-500/40 pb-3">
+        <div className="flex justify-between items-center border-b-2 border-amber-500/40 pb-2.5">
           <div className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-amber-400" />
             <div>
-              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">FSRS ACTIVE RECALL STATION</h2>
+              <h2 className="text-xs sm:text-sm font-pixel font-bold text-amber-300 leading-tight">TINDER SRS RECALL STATION</h2>
               <p className="text-[10px] font-pixel text-slate-400 mt-0.5">
-                ITEM {currentIndex + 1} OF {reviewQueue.length} (DUE REVIEWS)
+                CARD {currentIndex + 1} OF {reviewQueue.length}
               </p>
             </div>
           </div>
@@ -94,113 +169,173 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           </button>
         </div>
 
-        {/* Mnemonic Card */}
-        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden shadow-inner">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 mb-1">
-                <Sparkles className="w-3 h-3" />
-                Memory Cue
-              </span>
-              <h3 className="text-lg font-bold text-white leading-snug">{currentBlock.title}</h3>
-              {currentBlock.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {currentBlock.tags.map((t) => (
-                    <span key={t} className="text-[9px] bg-indigo-950 text-indigo-300 border border-indigo-800/40 px-2 py-0.5 rounded-md">
-                      #{t}
-                    </span>
-                  ))}
+        {/* Swipe Hint Legend */}
+        <div className="flex justify-between items-center text-[9px] font-pixel px-2 py-1 bg-zinc-950/80 rounded-lg border border-zinc-800/80 text-zinc-400">
+          <span className="text-rose-400 font-bold">← Kiri: LUPA</span>
+          <span className="text-amber-400 font-bold">↑ Atas: RAGU</span>
+          <span className="text-emerald-400 font-bold">Kanan: INGAT →</span>
+        </div>
+
+        {/* Card Stack Area */}
+        <div className="relative h-[340px] w-full flex items-center justify-center">
+          {/* Background Stack Card Illusion */}
+          {nextBlock && (
+            <div className="absolute inset-0 bg-zinc-900 border border-zinc-800 rounded-3xl p-5 scale-95 translate-y-3 opacity-40 blur-[0.5px] pointer-events-none shadow-xl flex flex-col justify-between">
+              <h4 className="text-sm font-bold text-zinc-400 truncate">{nextBlock.title}</h4>
+            </div>
+          )}
+
+          {/* Foreground Swiping Card */}
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={`absolute inset-0 bg-zinc-950 border-2 rounded-3xl p-5 flex flex-col justify-between shadow-2xl cursor-grab active:cursor-grabbing touch-none ${
+              isSwiping ? "" : "transition-transform duration-200 ease-out"
+            } ${
+              swipeDirection === "right"
+                ? "border-emerald-500 shadow-emerald-500/20"
+                : swipeDirection === "left"
+                ? "border-rose-500 shadow-rose-500/20"
+                : swipeDirection === "up"
+                ? "border-amber-500 shadow-amber-500/20"
+                : "border-zinc-800"
+            }`}
+            style={{
+              transform: swipeDirection === "right" && !isSwiping
+                ? "translateX(500px) rotate(30deg)"
+                : swipeDirection === "left" && !isSwiping
+                ? "translateX(-500px) rotate(-30deg)"
+                : swipeDirection === "up" && !isSwiping
+                ? "translateY(-500px) scale(0.8)"
+                : `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotationDeg}deg)`,
+            }}
+          >
+            {/* Visual Direction Overlay Badges */}
+            {swipeDirection === "right" && (
+              <div className="absolute top-4 left-4 border-2 border-emerald-400 text-emerald-400 font-pixel font-bold text-xs px-3 py-1 rounded-lg rotate-[-12deg] bg-emerald-950/80 shadow-lg animate-fade-in flex items-center gap-1 z-20">
+                <ThumbsUp className="w-4 h-4" /> INGAT (KANAN)
+              </div>
+            )}
+            {swipeDirection === "left" && (
+              <div className="absolute top-4 right-4 border-2 border-rose-400 text-rose-400 font-pixel font-bold text-xs px-3 py-1 rounded-lg rotate-[12deg] bg-rose-950/80 shadow-lg animate-fade-in flex items-center gap-1 z-20">
+                <ThumbsDown className="w-4 h-4" /> LUPA (KIRI)
+              </div>
+            )}
+            {swipeDirection === "up" && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 border-2 border-amber-400 text-amber-400 font-pixel font-bold text-xs px-3 py-1 rounded-lg bg-amber-950/80 shadow-lg animate-fade-in flex items-center gap-1 z-20">
+                <HelpCircle className="w-4 h-4" /> RAGU-RAGU (ATAS)
+              </div>
+            )}
+
+            {/* Card Content Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 mb-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Mnemonic Card
+                </span>
+                <h3 className="text-base font-bold text-white leading-snug">{currentBlock.title}</h3>
+                {currentBlock.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {currentBlock.tags.map((t) => (
+                      <span key={t} className="text-[9px] bg-indigo-950 text-indigo-300 border border-indigo-800/40 px-2 py-0.5 rounded-md">
+                        #{t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Hand-drawn Pixel Doodle */}
+              {doodle && (
+                <div className="w-14 h-14 rounded-xl bg-zinc-900 border border-zinc-700/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg">
+                  <DoodleCanvasPreview doodle={doodle} />
                 </div>
               )}
             </div>
 
-            {/* Hand-drawn Pixel Doodle */}
-            {doodle && (
-              <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-zinc-700/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-lg">
-                <DoodleCanvasPreview doodle={doodle} />
-              </div>
-            )}
-          </div>
+            {/* Reveal Answer Section */}
+            <div className="my-2 flex-1 flex items-center justify-center">
+              {isAnswerRevealed ? (
+                <div className="w-full text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap animate-fade-in bg-zinc-900/80 p-3.5 rounded-xl border border-zinc-800 max-h-[140px] overflow-y-auto">
+                  {currentBlock.text}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAnswerRevealed(true)}
+                  className="w-full py-4 bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-800/60 text-indigo-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-inner"
+                >
+                  <Eye className="w-4 h-4 text-indigo-400" />
+                  Tap to Reveal Note Answer
+                </button>
+              )}
+            </div>
 
-          {/* Reveal Section */}
-          <div className="border-t border-zinc-800/80 pt-3 min-h-[100px] flex items-center justify-center">
-            {isAnswerRevealed ? (
-              <div className="w-full text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap animate-fade-in bg-zinc-900/60 p-3.5 rounded-xl border border-zinc-800">
-                {currentBlock.text}
-              </div>
-            ) : (
+            {/* Card Footer Info */}
+            <div className="flex justify-between items-center text-[10px] text-zinc-500 border-t border-zinc-800/60 pt-2">
               <button
-                onClick={() => setIsAnswerRevealed(true)}
-                className="w-full py-4 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-800/50 text-indigo-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all"
+                type="button"
+                onClick={() => onTeleportToBlock(currentBlock.worldId, currentBlock.x, currentBlock.y)}
+                className="text-indigo-400 hover:underline flex items-center gap-1 font-pixel"
               >
-                <Eye className="w-4 h-4 text-indigo-400" />
-                Reveal Note Explanation
+                <Navigation className="w-3 h-3" /> View in Palace
               </button>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] text-zinc-500 border-t border-zinc-800/50 pt-2">
-            <button
-              onClick={() => onTeleportToBlock(currentBlock.worldId, currentBlock.x, currentBlock.y)}
-              className="text-indigo-400 hover:underline flex items-center gap-1"
-            >
-              <Navigation className="w-3 h-3" /> View in Palace
-            </button>
-            <span>Reps: {currentBlock.srs.reps} | Stability: {currentBlock.srs.stability.toFixed(1)}d</span>
+              <span className="font-mono text-[9px]">Reps: {currentBlock.srs.reps} | Stability: {currentBlock.srs.stability.toFixed(1)}d</span>
+            </div>
           </div>
         </div>
 
-        {/* FSRS Rating Buttons */}
-        {isAnswerRevealed ? (
-          <div className="space-y-2">
-            <p className="text-[10px] uppercase font-bold text-center tracking-wider text-zinc-400">
-              Rate Your Active Recall Quality:
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              <button
-                onClick={() => handleRating(1)}
-                className="py-2.5 bg-red-950/60 hover:bg-red-900/80 border border-red-800/50 text-red-300 text-xs font-bold rounded-xl flex flex-col items-center transition-all"
-              >
-                <span>Again</span>
-                <span className="text-[9px] font-normal opacity-70">Forgot</span>
-              </button>
-              <button
-                onClick={() => handleRating(2)}
-                className="py-2.5 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800/50 text-amber-300 text-xs font-bold rounded-xl flex flex-col items-center transition-all"
-              >
-                <span>Hard</span>
-                <span className="text-[9px] font-normal opacity-70">Struggled</span>
-              </button>
-              <button
-                onClick={() => handleRating(3)}
-                className="py-2.5 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-800/50 text-emerald-300 text-xs font-bold rounded-xl flex flex-col items-center transition-all"
-              >
-                <span>Good</span>
-                <span className="text-[9px] font-normal opacity-70">Recalled</span>
-              </button>
-              <button
-                onClick={() => handleRating(4)}
-                className="py-2.5 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/50 text-blue-300 text-xs font-bold rounded-xl flex flex-col items-center transition-all"
-              >
-                <span>Easy</span>
-                <span className="text-[9px] font-normal opacity-70">Instant</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center text-xs text-zinc-500 py-1">
-            Think back and attempt active recall before revealing the answer.
-          </div>
-        )}
+        {/* Swipe Quick Tap Buttons Row */}
+        <div className="grid grid-cols-4 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => handleRating(1, "left")}
+            className="py-2 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/50 text-rose-300 text-xs font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            title="Swipe Left: Forgot"
+          >
+            <ThumbsDown className="w-3.5 h-3.5" />
+            <span className="text-[10px]">LUPA</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRating(2, "up")}
+            className="py-2 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800/50 text-amber-300 text-xs font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            title="Swipe Up: Hard"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span className="text-[10px]">RAGU</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRating(3, "right")}
+            className="py-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-800/50 text-emerald-300 text-xs font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            title="Swipe Right: Good"
+          >
+            <ThumbsUp className="w-3.5 h-3.5" />
+            <span className="text-[10px]">INGAT</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleRating(4, "right")}
+            className="py-2 bg-sky-950/60 hover:bg-sky-900/80 border border-sky-800/50 text-sky-300 text-xs font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            title="Instant Recall"
+          >
+            <Zap className="w-3.5 h-3.5 text-sky-400" />
+            <span className="text-[10px]">INSTAN</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
 const DoodleCanvasPreview: React.FC<{ doodle: PixelDoodle }> = ({ doodle }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");

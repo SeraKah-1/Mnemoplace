@@ -152,8 +152,8 @@ export const Minimap: React.FC<MinimapProps> = ({
         bPxX = (b.pinX / 100) * dims.width;
         bPxY = (b.pinY / 100) * dims.height;
       } else {
-        bPxX = b.x * 32 + 16;
-        bPxY = b.y * 32 + 16;
+        bPxX = b.x * 16 + 8;
+        bPxY = b.y * 16 + 8;
       }
 
       const drawX = centerPx + (bPxX - playerPosition.x) * scale;
