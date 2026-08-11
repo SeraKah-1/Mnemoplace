@@ -83,8 +83,12 @@ interface FaceBtnProps {
 const FaceBtn: React.FC<FaceBtnProps> = ({ label, icon, color, bgColor, onClick, badge, title }) => (
   <button
     onClick={onClick}
+    onTouchStart={(e) => {
+      e.preventDefault();
+      onClick();
+    }}
     title={title}
-    className={`relative w-12 h-12 rounded-full ${bgColor} border-2 ${color} flex flex-col items-center justify-center gap-0.5 shadow-lg active:scale-90 transition-transform select-none`}
+    className={`relative w-12 h-12 rounded-full ${bgColor} border-2 ${color} flex flex-col items-center justify-center gap-0.5 shadow-lg active:scale-90 transition-transform select-none touch-none`}
   >
     {badge !== undefined && (
       <span className="absolute -top-1 -right-1 bg-amber-400 text-slate-950 text-[8px] font-bold font-mono px-1 rounded-full leading-none py-0.5 min-w-[16px] text-center">
@@ -107,8 +111,12 @@ interface BumperBtnProps {
 const BumperBtn: React.FC<BumperBtnProps> = ({ label, icon, onClick, active, title }) => (
   <button
     onClick={onClick}
+    onTouchStart={(e) => {
+      e.preventDefault();
+      onClick();
+    }}
     title={title}
-    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 font-pixel text-[9px] transition-all active:translate-y-0.5 select-none shadow-md ${
+    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 font-pixel text-[9px] transition-all active:translate-y-0.5 select-none shadow-md touch-none ${
       active
         ? "bg-emerald-800 border-emerald-400 text-emerald-200 animate-pulse"
         : "bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-400"

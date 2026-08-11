@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { WorldFolder } from "../domain/types";
 import { saveWorld, deleteWorld } from "../domain/db";
 import { BUILTIN_PRESETS, FloorPreset } from "../presets";
+import { ColorWheelPicker } from "./ColorWheelPicker";
 import { Folder, Plus, Trash2, Check, X, Palette, Image as ImageIcon, LayoutGrid, Upload, Sparkles } from "lucide-react";
 
 interface FolderModalProps {
@@ -27,6 +28,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
   const [selectedPresetId, setSelectedPresetId] = useState<string>("preset-skeleton");
   const [customImageUrl, setCustomImageUrl] = useState<string>("");
   const [mapScale, setMapScale] = useState<number>(2.5);
+  const [showColorWheel, setShowColorWheel] = useState<boolean>(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -200,6 +202,46 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                 placeholder="Notes about bones, rooms, or concepts mapped to this floor"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 mt-1"
               />
+            </div>
+
+            {/* Theme Accent Color with Circular Color Wheel */}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold flex items-center gap-1">
+                  <Palette className="w-3.5 h-3.5 text-amber-400" /> Floor Theme Color:
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowColorWheel(!showColorWheel)}
+                  className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                >
+                  {showColorWheel ? "Hide Color Wheel" : "Custom Color Wheel 🎨"}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  onClick={() => setShowColorWheel(!showColorWheel)}
+                  className="w-9 h-9 rounded-xl border-2 border-white/40 shadow-lg cursor-pointer flex items-center justify-center text-xs font-mono font-bold text-white transition-transform hover:scale-105"
+                  style={{ backgroundColor: themeColor }}
+                  title="Click to open Color Wheel"
+                />
+                <input
+                  type="text"
+                  value={themeColor}
+                  onChange={(e) => setThemeColor(e.target.value)}
+                  className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white font-mono uppercase w-32 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {showColorWheel && (
+                <div className="mt-3 flex justify-center animate-fade-in">
+                  <ColorWheelPicker
+                    color={themeColor}
+                    onChange={(hex) => setThemeColor(hex)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Map Mode Choice */}
