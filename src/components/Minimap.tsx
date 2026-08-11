@@ -148,7 +148,7 @@ export const Minimap: React.FC<MinimapProps> = ({
       let bPxX: number;
       let bPxY: number;
 
-      if (b.pinX !== undefined && b.pinY !== undefined) {
+      if (activeWorld.mapImageUrl && b.pinX !== undefined && b.pinY !== undefined) {
         bPxX = (b.pinX / 100) * dims.width;
         bPxY = (b.pinY / 100) * dims.height;
       } else {

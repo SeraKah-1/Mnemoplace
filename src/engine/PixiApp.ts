@@ -279,7 +279,7 @@ export class PixiApp {
       let pxX: number;
       let pxY: number;
 
-      if (b.pinX !== undefined && b.pinY !== undefined) {
+      if (this.currentMapImageUrl && b.pinX !== undefined && b.pinY !== undefined) {
         // Spatial pin percentage calculation on custom image map
         pxX = (b.pinX / 100) * this.mapWidth;
         pxY = (b.pinY / 100) * this.mapHeight;
