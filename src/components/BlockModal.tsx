@@ -11,6 +11,9 @@ interface BlockModalProps {
   worldId: string;
   tileX: number;
   tileY: number;
+  pinX?: number;
+  pinY?: number;
+  initialPinLabel?: string;
   existingBlock?: MemoryBlock | null;
   onSave: (block: MemoryBlock) => void;
   onDelete?: (blockId: string) => void;
@@ -21,12 +24,16 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   worldId,
   tileX,
   tileY,
+  pinX,
+  pinY,
+  initialPinLabel = "",
   existingBlock,
   onSave,
   onDelete,
   onCancel,
 }) => {
   const [title, setTitle] = useState(existingBlock?.title || "");
+  const [pinLabel, setPinLabel] = useState(existingBlock?.pinLabel || initialPinLabel);
   const [text, setText] = useState(existingBlock?.text || "");
   const [tagsInput, setTagsInput] = useState(existingBlock?.tags.join(", ") || "");
   const [selectedDoodleId, setSelectedDoodleId] = useState<string | null>(existingBlock?.doodleId || null);
@@ -36,7 +43,6 @@ export const BlockModal: React.FC<BlockModalProps> = ({
 
   useEffect(() => {
     Promise.all([getAllDoodles(), getAllBlocks()]).then(([allDoodles, allBlocks]) => {
-      // Filter out doodle IDs used by OTHER memory blocks
       const usedDoodleIds = new Set(
         allBlocks
           .filter((b) => b.id !== existingBlock?.id && b.doodleId)
@@ -75,6 +81,9 @@ export const BlockModal: React.FC<BlockModalProps> = ({
       worldId,
       x: tileX,
       y: tileY,
+      pinX: existingBlock?.pinX ?? pinX,
+      pinY: existingBlock?.pinY ?? pinY,
+      pinLabel: pinLabel.trim() || existingBlock?.pinLabel || title.trim(),
       title: title.trim(),
       text: text.trim(),
       doodleId: selectedDoodleId,
@@ -90,7 +99,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="jrpg-box p-5 w-full max-w-md flex flex-col gap-4 text-slate-100 animate-fade-in">
+        <div className="jrpg-box p-5 w-full max-w-md flex flex-col gap-4 text-slate-100 animate-fade-in max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3">
             <div>
@@ -99,7 +108,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 {existingBlock ? "EDIT MNEMONIC ANCHOR" : "ANCHOR NEW MEMORY"}
               </h2>
               <p className="text-[10px] text-slate-400 font-pixel mt-0.5">
-                TILE ({tileX}, {tileY}) IN {worldId}
+                {pinX !== undefined ? `SPATIAL PIN AT (${pinX}%, ${pinY}%)` : `TILE (${tileX}, ${tileY}) IN ${worldId}`}
               </p>
             </div>
             <button onClick={onCancel} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800">
@@ -108,6 +117,22 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
+            {/* Spatial Pin Label (e.g. Femur, Frontal Lobe, Skull) */}
+            {(pinX !== undefined || existingBlock?.pinX !== undefined) && (
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider font-semibold text-amber-400">
+                  Spatial Anchor Label (e.g. Femur / Skull / Kitchen)
+                </label>
+                <input
+                  type="text"
+                  value={pinLabel}
+                  onChange={(e) => setPinLabel(e.target.value)}
+                  placeholder="e.g. Femur (Thigh Bone), Frontal Lobe, Skull"
+                  className="w-full bg-zinc-950 border border-amber-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-400"
+                />
+              </div>
+            )}
+
             {/* Title */}
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-wider font-semibold text-zinc-400">
@@ -118,7 +143,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Mitochondria Powerhouse, Japanese Kanji 太陽"
+                placeholder="e.g. Femur is longest bone in human body, Mitochondria Powerhouse"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500"
               />
             </div>

@@ -36,51 +36,28 @@ service cloud.firestore {
       let isCategoryValid = data.category is string && data.category.size() <= 100;
       let isStatusValid = data.status in ['generating', 'completed', 'error'];
       
-      // Optional operationName
       let isOperationNameValid = !('operationName' in data) || (data.operationName is string && data.operationName.size() <= 200);
+      let isFloorIdValid = !('floorId' in data) || (data.floorId is string && data.floorId.size() <= 128);
+      let isPinXValid = !('pinX' in data) || (data.pinX is number);
+      let isPinYValid = !('pinY' in data) || (data.pinY is number);
+      let isPinLabelValid = !('pinLabel' in data) || (data.pinLabel is string && data.pinLabel.size() <= 200);
       
-      return hasRequiredFields && isUserIdValid && isContentValid && isCategoryValid && isStatusValid && isOperationNameValid;
+      return hasRequiredFields && isUserIdValid && isContentValid && isCategoryValid && isStatusValid && isOperationNameValid && isFloorIdValid && isPinXValid && isPinYValid && isPinLabelValid;
     }
 
     match /users/{userId} {
-      // Isolate users/userId paths for future PII, though we only define memories subcollection here.
       allow read, write: if false;
 
+      match /floors/{floorId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+
       match /memories/{memoryId} {
-        // Secure List Queries
         allow list: if isOwner(userId);
-        
-        // Secure Get
         allow get: if isOwner(userId) && isValidId(memoryId);
-        
-        allow create: if 
-          isOwner(userId) && 
-          isValidId(memoryId) &&
-          isValidMemory(incoming(), userId) &&
-          incoming().keys().size() >= 6 && 
-          incoming().keys().size() <= 7 && // userId, content, category, status, createdAt, updatedAt + optional operationName
-          incoming().createdAt == request.time &&
-          incoming().updatedAt == request.time;
-          
-        allow update: if 
-          isOwner(userId) && 
-          isValidId(memoryId) &&
-          isValidMemory(incoming(), userId) &&
-          incoming().userId == existing().userId &&
-          incoming().createdAt == existing().createdAt &&
-          incoming().updatedAt == request.time &&
-          (
-            // Action: Update status and operationName (e.g. from backend response)
-            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'operationName', 'updatedAt'])) ||
-            // Action: Edit content and category (e.g. user manually edits)
-            (incoming().diff(existing()).affectedKeys().hasOnly(['content', 'category', 'updatedAt'])) ||
-            // Action: Complete generation (status change)
-            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
-          );
-          
-        allow delete: if
-          isOwner(userId) &&
-          isValidId(memoryId);
+        allow create: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(memoryId);
       }
     }
   }

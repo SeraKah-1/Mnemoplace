@@ -8,9 +8,12 @@ export interface AppMeta {
 
 export interface WorldFolder {
   id: string; // Unique slug/UUID, e.g. "world_floor_1"
-  name: string; // e.g. "Floor 1: Ancient Keep"
+  name: string; // e.g. "Floor 1: Human Skeleton Anatomy"
   floorNumber?: number; // Tower Floor Level (1, 2, 3...)
   themeColor: string; // Hex color string for ground tile tint & minimap accent
+  mapImageUrl?: string; // Base64 data URL or URL for custom floor image (e.g. Skeleton, House Plan, Map)
+  mapMode?: 'grid' | 'image'; // 'grid' for 2D Pixi tile grid, 'image' for custom spatial image map
+  mapScale?: number; // Custom image map dimension multiplier (e.g. 1.0x to 5.0x, default 2.0x = 2000px)
   spawnX: number; // User-defined default spawn tile X
   spawnY: number; // User-defined default spawn tile Y
   lastTileX?: number; // Autosaved last player tile X
@@ -48,6 +51,9 @@ export interface MemoryBlock {
   worldId: string;
   x: number; // Global tile X position
   y: number; // Global tile Y position
+  pinX?: number; // Responsive Image Map Pin X (percentage 0..100)
+  pinY?: number; // Responsive Image Map Pin Y (percentage 0..100)
+  pinLabel?: string; // Label for spatial pin anchor (e.g. "Femur", "Frontal Lobe", "Kitchen Sink")
   title: string;
   text: string;
   doodleId: string | null;

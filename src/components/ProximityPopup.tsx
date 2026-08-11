@@ -47,16 +47,27 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setDragOffset({ x: 0, y: 0 });
   }, [activeBlock?.id]);
 
-  // Hysteresis threshold logic: active < 2.5 tiles, inactive > 3.5 tiles
+  // Hysteresis threshold logic: active < 80px (~2.5 tiles), inactive > 120px (~3.5 tiles)
   useEffect(() => {
     let closest: MemoryBlock | null = null;
     let minDistance = Infinity;
+    const dims = pixiApp.getMapDimensions();
 
     for (const b of allBlocks) {
       if (b.worldId !== worldId) continue;
-      const dx = b.x - playerPosition.tileX;
-      const dy = b.y - playerPosition.tileY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      let bPxX: number;
+      let bPxY: number;
+
+      if (b.pinX !== undefined && b.pinY !== undefined) {
+        bPxX = (b.pinX / 100) * dims.width;
+        bPxY = (b.pinY / 100) * dims.height;
+      } else {
+        bPxX = b.x * 32 + 16;
+        bPxY = b.y * 32 + 16;
+      }
+
+      const dist = Math.hypot(playerPosition.x - bPxX, playerPosition.y - bPxY);
 
       if (dist < minDistance) {
         minDistance = dist;
@@ -65,18 +76,16 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     }
 
     if (activeBlock) {
-      // Check if current active block exceeds hysteresis upper bound (3.5 tiles)
-      const dx = activeBlock.x - playerPosition.tileX;
-      const dy = activeBlock.y - playerPosition.tileY;
-      const currentDist = Math.sqrt(dx * dx + dy * dy);
+      let activePxX = activeBlock.pinX !== undefined ? (activeBlock.pinX / 100) * dims.width : activeBlock.x * 32 + 16;
+      let activePxY = activeBlock.pinY !== undefined ? (activeBlock.pinY / 100) * dims.height : activeBlock.y * 32 + 16;
+      const currentDist = Math.hypot(playerPosition.x - activePxX, playerPosition.y - activePxY);
 
-      if (currentDist > 3.5) {
+      if (currentDist > 120) {
         setActiveBlock(null);
         setIsRevealed(false);
       }
     } else {
-      // Activate new block if within lower bound (2.5 tiles)
-      if (closest && minDistance <= 2.5) {
+      if (closest && minDistance <= 80) {
         setActiveBlock(closest);
         setIsRevealed(false);
       }
@@ -98,8 +107,15 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
       setScreenPos(null);
       return;
     }
-    const pos = pixiApp.worldToScreen(activeBlock.x, activeBlock.y);
-    setScreenPos(pos);
+
+    const updateScreenPos = () => {
+      const pos = pixiApp.worldToScreen(activeBlock.x, activeBlock.y, activeBlock.pinX, activeBlock.pinY);
+      setScreenPos(pos);
+    };
+
+    updateScreenPos();
+    const interval = setInterval(updateScreenPos, 30);
+    return () => clearInterval(interval);
   }, [activeBlock, playerPosition]);
 
   // Touch & Mouse Drag Handlers

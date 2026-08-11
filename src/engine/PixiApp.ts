@@ -1,4 +1,4 @@
-import { Application, Container, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, Container, Sprite, Text, TextStyle, Texture, Assets } from "pixi.js";
 import { TILE_SIZE, CHUNK_SIZE, worldPxToTile, tileToWorldPx, tileToChunkCoord } from "./constants";
 import { getTileTexture, getDoodleTexture, getPlayerTexture, getBlockPillarTexture, clearTextureCache } from "./TextureCache";
 import { chunkManager } from "./ChunkManager";
@@ -17,9 +17,13 @@ export class PixiApp {
   private playerController: PlayerController = new PlayerController(0, 0);
   private currentWorldId: string = "world_default";
   private currentThemeColor: string = "#6366f1";
+  private currentMapImageUrl: string | null = null;
+  private mapWidth: number = 1000;
+  private mapHeight: number = 1000;
+
   private loadedDoodlesMap = new Map<string, PixelDoodle>();
 
-  private onTileClick?: (tileX: number, tileY: number, existingBlock?: MemoryBlock) => void;
+  private onTileClick?: (tileX: number, tileY: number, existingBlock?: MemoryBlock, pinX?: number, pinY?: number) => void;
   private onPlayerMove?: (pos: PlayerPosition) => void;
   private isInitialized = false;
   private isDisposed = false;
@@ -37,7 +41,6 @@ export class PixiApp {
       antialias: false, // Enforce crisp retro pixels
     });
 
-    // If destroyed while init promise was resolving, cleanup and abort
     if (this.isDisposed || !containerElement) {
       try {
         app.destroy(true);
@@ -71,14 +74,14 @@ export class PixiApp {
     this.worldContainer.addChild(this.playerLayer);
     this.app.stage.addChild(this.worldContainer);
 
-    // Create Player Sprite
+    // Create Player Sprite (Character 2D)
     const playerTex = getPlayerTexture();
     this.playerSprite = new Sprite(playerTex);
     this.playerSprite.anchor.set(0.5, 0.5);
     this.playerSprite.scale.set(1.5, 1.5);
     this.playerLayer.addChild(this.playerSprite);
 
-    // Setup User Controls
+    // Setup User Controls (WASD / Arrow Keys / Virtual D-Pad)
     this.setupInputs();
 
     // Load initial doodles cache
@@ -97,7 +100,7 @@ export class PixiApp {
     await this.refreshWorld(true);
   }
 
-  public setOnTileClick(cb: (tileX: number, tileY: number, existingBlock?: MemoryBlock) => void) {
+  public setOnTileClick(cb: (tileX: number, tileY: number, existingBlock?: MemoryBlock, pinX?: number, pinY?: number) => void) {
     this.onTileClick = cb;
   }
 
@@ -121,13 +124,67 @@ export class PixiApp {
   private currentChunkCx: number = Infinity;
   private currentChunkCy: number = Infinity;
   private renderGen: number = 0;
+  private currentMapScale: number = 2.0;
 
-  public async setWorld(worldId: string, themeColor: string, spawnX = 0, spawnY = 0): Promise<void> {
+  public async setWorld(
+    worldId: string,
+    themeColor: string,
+    spawnX = 0,
+    spawnY = 0,
+    mapImageUrl?: string,
+    mapScale: number = 2.0
+  ): Promise<void> {
+    const isNewWorld = this.currentWorldId !== worldId;
     this.currentWorldId = worldId;
     this.currentThemeColor = themeColor;
-    this.playerController.setIsTileSolid((tx, ty) => chunkManager.isTileSolid(this.currentWorldId, tx, ty));
-    this.playerController.setPosition(tileToWorldPx(spawnX) + TILE_SIZE / 2, tileToWorldPx(spawnY) + TILE_SIZE / 2);
+    this.currentMapImageUrl = mapImageUrl || null;
+    this.currentMapScale = mapScale || 2.0;
+
+    if (this.currentMapImageUrl) {
+      // Custom Image Map Mode: Set scaled dimensions
+      this.mapWidth = Math.round(1000 * this.currentMapScale);
+      this.mapHeight = Math.round(1000 * this.currentMapScale);
+      this.playerController.setIsTileSolid(() => false);
+      if (isNewWorld) {
+        this.playerController.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+      }
+    } else {
+      // 2D Tile Grid Mode
+      this.playerController.setIsTileSolid((tx, ty) => chunkManager.isTileSolid(this.currentWorldId, tx, ty));
+      if (isNewWorld) {
+        this.playerController.setPosition(tileToWorldPx(spawnX) + TILE_SIZE / 2, tileToWorldPx(spawnY) + TILE_SIZE / 2);
+      }
+    }
+
     await this.refreshWorld(true);
+  }
+
+  public async setMapScale(scale: number): Promise<void> {
+    if (this.currentMapImageUrl) {
+      const oldWidth = this.mapWidth || 1000;
+      const oldHeight = this.mapHeight || 1000;
+      const curPos = this.playerController.getPosition();
+      const relX = curPos.x / oldWidth;
+      const relY = curPos.y / oldHeight;
+
+      this.currentMapScale = scale;
+      this.mapWidth = Math.round(1000 * scale);
+      this.mapHeight = Math.round(1000 * scale);
+
+      const newPlayerX = relX * this.mapWidth;
+      const newPlayerY = relY * this.mapHeight;
+      this.playerController.setPosition(newPlayerX, newPlayerY);
+    } else {
+      this.currentMapScale = scale;
+      this.mapWidth = Math.round(1000 * scale);
+      this.mapHeight = Math.round(1000 * scale);
+    }
+
+    await this.refreshWorld(true);
+  }
+
+  public getMapDimensions(): { width: number; height: number; scale: number } {
+    return { width: this.mapWidth, height: this.mapHeight, scale: this.currentMapScale };
   }
 
   public async refreshWorld(force: boolean = false): Promise<void> {
@@ -135,7 +192,7 @@ export class PixiApp {
     const playerCx = tileToChunkCoord(playerPos.tileX);
     const playerCy = tileToChunkCoord(playerPos.tileY);
 
-    if (!force && playerCx === this.currentChunkCx && playerCy === this.currentChunkCy) {
+    if (!force && !this.currentMapImageUrl && playerCx === this.currentChunkCx && playerCy === this.currentChunkCy) {
       return;
     }
 
@@ -152,7 +209,7 @@ export class PixiApp {
 
     if (currentGen !== this.renderGen) return;
 
-    this.renderChunks();
+    await this.renderChunks();
     this.renderBlocks(blocks);
   }
 
@@ -164,13 +221,30 @@ export class PixiApp {
     await this.refreshWorld(true);
   }
 
-  private renderChunks() {
+  private async renderChunks() {
     if (!this.tileLayer) return;
     const tileChildren = this.tileLayer.removeChildren();
     for (const child of tileChildren) {
       child.destroy({ children: true, texture: false });
     }
 
+    // Render Custom Image Background (Skeleton, House Plan, Biology Diagram)
+    if (this.currentMapImageUrl) {
+      try {
+        const tex = await Assets.load(this.currentMapImageUrl);
+        const mapSprite = new Sprite(tex);
+        mapSprite.x = 0;
+        mapSprite.y = 0;
+        mapSprite.width = this.mapWidth;
+        mapSprite.height = this.mapHeight;
+        this.tileLayer.addChild(mapSprite);
+        return;
+      } catch (err) {
+        console.warn("Failed to load mapImageUrl in Pixi, falling back to tile grid:", err);
+      }
+    }
+
+    // Fallback: 2D Tile Grid Rendering
     const loadedChunks = chunkManager.getLoadedChunks();
     for (const chunk of loadedChunks) {
       const chunkBaseX = chunk.cx * CHUNK_SIZE * TILE_SIZE;
@@ -202,10 +276,19 @@ export class PixiApp {
     }
 
     for (const b of blocks) {
-      const pxX = tileToWorldPx(b.x);
-      const pxY = tileToWorldPx(b.y);
+      let pxX: number;
+      let pxY: number;
 
-      // Base Pillar Sprite
+      if (b.pinX !== undefined && b.pinY !== undefined) {
+        // Spatial pin percentage calculation on custom image map
+        pxX = (b.pinX / 100) * this.mapWidth;
+        pxY = (b.pinY / 100) * this.mapHeight;
+      } else {
+        pxX = tileToWorldPx(b.x);
+        pxY = tileToWorldPx(b.y);
+      }
+
+      // Base Pillar / Pin Sprite
       const hasDoodle = Boolean(b.doodleId);
       const pillarTex = getBlockPillarTexture(hasDoodle);
       const pillarSprite = new Sprite(pillarTex);
@@ -215,13 +298,29 @@ export class PixiApp {
       pillarSprite.height = TILE_SIZE;
       this.blockLayer.addChild(pillarSprite);
 
+      // Render Pin Label Text if present
+      if (b.pinLabel || b.title) {
+        const labelText = new Text({
+          text: b.pinLabel || b.title,
+          style: new TextStyle({
+            fontSize: 10,
+            fill: "#fbbf24",
+            stroke: { color: "#090d16", width: 3 },
+            fontWeight: "bold",
+            fontFamily: "sans-serif",
+          }),
+        });
+        labelText.x = pxX + TILE_SIZE / 2 - labelText.width / 2;
+        labelText.y = pxY + TILE_SIZE + 2;
+        this.blockLayer.addChild(labelText);
+      }
+
       // Custom Hand-Drawn Pixel Doodle Overlay
       if (b.doodleId && this.loadedDoodlesMap.has(b.doodleId)) {
         const doodleData = this.loadedDoodlesMap.get(b.doodleId)!;
         const doodleTex = getDoodleTexture(doodleData);
         const doodleSprite = new Sprite(doodleTex);
 
-        // Position slightly floating above pillar
         doodleSprite.x = pxX - 4;
         doodleSprite.y = pxY - 18;
         doodleSprite.width = 24;
@@ -247,7 +346,6 @@ export class PixiApp {
 
     if (e.repeat) return;
 
-    // Prevent page scroll when using game navigation keys
     if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
       e.preventDefault();
     }
@@ -265,7 +363,6 @@ export class PixiApp {
     if (e.target !== this.app.canvas) return;
 
     const rect = this.app.canvas.getBoundingClientRect();
-    // Support Retina / High-DPR display scaling
     const scaleX = (this.app.screen?.width || rect.width) / (rect.width || 1);
     const scaleY = (this.app.screen?.height || rect.height) / (rect.height || 1);
 
@@ -284,11 +381,18 @@ export class PixiApp {
     const tileX = worldPxToTile(worldPxX);
     const tileY = worldPxToTile(worldPxY);
 
+    let pinX: number | undefined = undefined;
+    let pinY: number | undefined = undefined;
+
+    if (this.currentMapImageUrl) {
+      pinX = Number(((worldPxX / this.mapWidth) * 100).toFixed(2));
+      pinY = Number(((worldPxY / this.mapHeight) * 100).toFixed(2));
+    }
+
     const existingBlock = chunkManager.getBlockAt(this.currentWorldId, tileX, tileY);
-    console.log(`[PixiApp] Canvas tile clicked at (${tileX}, ${tileY}) - Block found:`, existingBlock ? existingBlock.title : "none");
 
     if (this.onTileClick) {
-      this.onTileClick(tileX, tileY, existingBlock || undefined);
+      this.onTileClick(tileX, tileY, existingBlock || undefined, pinX, pinY);
     }
   };
 
@@ -320,14 +424,13 @@ export class PixiApp {
     this.worldContainer.x = Math.round(screenCenterX - playerPos.x);
     this.worldContainer.y = Math.round(screenCenterY - playerPos.y);
 
-    // Refresh Chunks as Player moves into new tiles
     if (moved) {
       this.refreshWorld();
     }
   }
 
-  // Projection math helper: convert world tile coordinate to screen pixel coordinates
-  public worldToScreen(tileX: number, tileY: number): { x: number; y: number } | null {
+  // Projection math helper: convert world tile or pin coordinate to screen pixel coordinates
+  public worldToScreen(tileX: number, tileY: number, pinX?: number, pinY?: number): { x: number; y: number } | null {
     if (!this.app?.canvas) return null;
     const playerPos = this.playerController.getPosition();
     const screenWidth = this.app?.screen?.width || window.innerWidth;
@@ -335,8 +438,16 @@ export class PixiApp {
     const screenCenterX = screenWidth / 2;
     const screenCenterY = screenHeight / 2;
 
-    const blockPxX = tileToWorldPx(tileX) + TILE_SIZE / 2;
-    const blockPxY = tileToWorldPx(tileY) + TILE_SIZE / 2;
+    let blockPxX: number;
+    let blockPxY: number;
+
+    if (pinX !== undefined && pinY !== undefined && this.currentMapImageUrl) {
+      blockPxX = (pinX / 100) * this.mapWidth;
+      blockPxY = (pinY / 100) * this.mapHeight;
+    } else {
+      blockPxX = tileToWorldPx(tileX) + TILE_SIZE / 2;
+      blockPxY = tileToWorldPx(tileY) + TILE_SIZE / 2;
+    }
 
     const screenX = screenCenterX + (blockPxX - playerPos.x);
     const screenY = screenCenterY + (blockPxY - playerPos.y);

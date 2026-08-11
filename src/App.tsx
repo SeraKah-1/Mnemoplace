@@ -13,6 +13,7 @@ import { FolderModal } from "./components/FolderModal";
 import { BackupModal } from "./components/BackupModal";
 import { ControlsOverlay } from "./components/ControlsOverlay";
 import { AuthModal } from "./components/AuthModal";
+import { SpatialMapCanvas } from "./components/SpatialMapCanvas";
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +40,7 @@ export default function App() {
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [modalTargetTile, setModalTargetTile] = useState<{ x: number; y: number } | null>(null);
   const [editingBlock, setEditingBlock] = useState<MemoryBlock | null>(null);
+  const [pendingPinCoords, setPendingPinCoords] = useState<{ x: number; y: number } | null>(null);
 
   const [showJournal, setShowJournal] = useState<boolean>(false);
   const [showMinimap, setShowMinimap] = useState<boolean>(false);
@@ -82,7 +84,7 @@ export default function App() {
       if (currentWorld) {
         const startX = currentWorld.lastTileX ?? currentWorld.spawnX;
         const startY = currentWorld.lastTileY ?? currentWorld.spawnY;
-        await pixiApp.setWorld(currentWorld.id, currentWorld.themeColor, startX, startY);
+        await pixiApp.setWorld(currentWorld.id, currentWorld.themeColor, startX, startY, currentWorld.mapImageUrl, currentWorld.mapScale || 2.0);
       }
     } catch (err) {
       console.error("Failed to initialize database:", err);
@@ -107,7 +109,7 @@ export default function App() {
         }
       });
 
-      pixiApp.setOnTileClick(async (tileX, tileY, existingBlock) => {
+      pixiApp.setOnTileClick(async (tileX, tileY, existingBlock, pinX, pinY) => {
         if (buildModeRef.current) {
           if (activeWorldRef.current) {
             await chunkManager.setTileAt(activeWorldRef.current.id, tileX, tileY, selectedTileTypeRef.current);
@@ -116,6 +118,7 @@ export default function App() {
         } else {
           setModalTargetTile({ x: tileX, y: tileY });
           setEditingBlock(existingBlock || null);
+          setPendingPinCoords(pinX !== undefined ? { x: pinX, y: pinY! } : null);
           setShowBlockModal(true);
         }
       });
@@ -132,6 +135,35 @@ export default function App() {
       pixiApp.destroy();
     };
   }, [refreshDatabase]);
+
+  // World Switching
+  const handleSelectWorld = async (worldId: string) => {
+    await updateActiveWorld(worldId);
+    const updatedMeta = await getAppMeta();
+    setMeta(updatedMeta);
+
+    const targetWorld = worlds.find((w) => w.id === worldId);
+    if (targetWorld) {
+      setActiveWorld(targetWorld);
+      const startX = targetWorld.lastTileX ?? targetWorld.spawnX;
+      const startY = targetWorld.lastTileY ?? targetWorld.spawnY;
+      await pixiApp.setWorld(targetWorld.id, targetWorld.themeColor, startX, startY, targetWorld.mapImageUrl, targetWorld.mapScale || 2.0);
+    }
+  };
+
+  const handleUpdateMapScale = async (scale: number) => {
+    if (!activeWorld) return;
+    const updatedWorld: WorldFolder = {
+      ...activeWorld,
+      mapScale: scale,
+      updatedAt: Date.now(),
+    };
+    setActiveWorld(updatedWorld);
+    await saveWorld(updatedWorld);
+    await pixiApp.setMapScale(scale);
+    const allWorlds = await getAllWorlds();
+    setWorlds(allWorlds);
+  };
 
   // Global Hotkey listeners (E/Space = Place, Delete/X = Delete, F = Elevator)
   useEffect(() => {
@@ -151,8 +183,19 @@ export default function App() {
             await pixiApp.refreshWorld(true);
           }
         } else {
-          // NORMAL MODE ACTIVE: Open Memory Anchor Modal
-          const existing = chunkManager.getBlockAt(activeWorld?.id || "", playerPosition.tileX, playerPosition.tileY);
+          // NORMAL MODE ACTIVE: Open Memory Anchor Modal (supports spatial pins on custom image maps)
+          const curWorld = activeWorldRef.current || activeWorld;
+          if (curWorld?.mapImageUrl) {
+            const dims = pixiApp.getMapDimensions();
+            const curPos = pixiApp.getPlayerController().getPosition();
+            const pinX = Number(((curPos.x / dims.width) * 100).toFixed(2));
+            const pinY = Number(((curPos.y / dims.height) * 100).toFixed(2));
+            setPendingPinCoords({ x: pinX, y: pinY });
+          } else {
+            setPendingPinCoords(null);
+          }
+
+          const existing = chunkManager.getBlockAt(curWorld?.id || "", playerPosition.tileX, playerPosition.tileY);
           setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
           setEditingBlock(existing || null);
           setShowBlockModal(true);
@@ -187,7 +230,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [isAnyModalOpen, activeWorld, playerPosition.tileX, playerPosition.tileY]);
+  }, [isAnyModalOpen, activeWorld, playerPosition]);
 
   // Debounce autosave player last known tile position to active world
   useEffect(() => {
@@ -208,63 +251,64 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [playerPosition.tileX, playerPosition.tileY, activeWorld]);
 
-  // World Switching
-  const handleSelectWorld = async (worldId: string) => {
-    await updateActiveWorld(worldId);
-    const updatedMeta = await getAppMeta();
-    setMeta(updatedMeta);
-
-    const targetWorld = worlds.find((w) => w.id === worldId);
-    if (targetWorld) {
-      setActiveWorld(targetWorld);
-      const startX = targetWorld.lastTileX ?? targetWorld.spawnX;
-      const startY = targetWorld.lastTileY ?? targetWorld.spawnY;
-      await pixiApp.setWorld(targetWorld.id, targetWorld.themeColor, startX, startY);
-    }
-  };
-
-  // Block Modal Save / Delete
   const handleSaveBlock = async (block: MemoryBlock) => {
     await chunkManager.createOrUpdateBlock(block);
+    await saveBlock(block);
     await pixiApp.reloadDoodlesCache();
     await pixiApp.refreshWorld(true);
 
     const updatedBlocks = await getAllBlocks();
     setBlocks(updatedBlocks);
     setShowBlockModal(false);
+    setPendingPinCoords(null);
   };
 
-  // Smart delete handler (works for exact player tile or active proximity block)
+  // Smart delete handler (supports both 2D tile blocks and custom image spatial pins)
   const handleDeleteSmart = async () => {
     const curWorld = activeWorldRef.current || activeWorld;
     if (!curWorld) return;
 
-    // 1. Check exact player tile first
-    let targetBlock = chunkManager.getBlockAt(curWorld.id, playerPosition.tileX, playerPosition.tileY);
+    let targetBlock: MemoryBlock | null = null;
+    const dims = pixiApp.getMapDimensions();
+    const curPos = pixiApp.getPlayerController().getPosition();
 
-    // 2. If no block directly under player, check for closest block within proximity (<= 2.5 tiles)
-    if (!targetBlock) {
+    if (curWorld.mapImageUrl) {
       let minDistance = Infinity;
       for (const b of blocks) {
         if (b.worldId !== curWorld.id) continue;
-        const dx = b.x - playerPosition.tileX;
-        const dy = b.y - playerPosition.tileY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist <= 2.5 && dist < minDistance) {
+        let bPxX = b.pinX !== undefined ? (b.pinX / 100) * dims.width : b.x * 32 + 16;
+        let bPxY = b.pinY !== undefined ? (b.pinY / 100) * dims.height : b.y * 32 + 16;
+        const dist = Math.hypot(curPos.x - bPxX, curPos.y - bPxY);
+        if (dist <= 120 && dist < minDistance) {
           minDistance = dist;
           targetBlock = b;
+        }
+      }
+    } else {
+      targetBlock = chunkManager.getBlockAt(curWorld.id, playerPosition.tileX, playerPosition.tileY);
+      if (!targetBlock) {
+        let minDistance = Infinity;
+        for (const b of blocks) {
+          if (b.worldId !== curWorld.id) continue;
+          const dx = b.x - playerPosition.tileX;
+          const dy = b.y - playerPosition.tileY;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= 2.5 && dist < minDistance) {
+            minDistance = dist;
+            targetBlock = b;
+          }
         }
       }
     }
 
     if (targetBlock) {
       await chunkManager.removeBlockById(targetBlock.id);
+      await deleteBlock(targetBlock.id);
       await pixiApp.reloadDoodlesCache();
       await pixiApp.refreshWorld(true);
       const updated = await getAllBlocks();
       setBlocks(updated);
     } else if (buildModeRef.current || buildMode) {
-      // Build mode: reset tile at player position to baseline grass (0)
       await chunkManager.setTileAt(curWorld.id, playerPosition.tileX, playerPosition.tileY, 0);
       await pixiApp.refreshWorld(true);
     }
@@ -295,7 +339,7 @@ export default function App() {
 
   return (
     <div className="w-full h-screen bg-zinc-950 text-zinc-100 overflow-hidden relative select-none">
-      {/* PixiJS 2D Canvas Mount */}
+      {/* PixiJS 2D Tile & Image WebGL Canvas Mount */}
       <div ref={containerRef} className="w-full h-full absolute inset-0 block" />
 
       {/* Loading Overlay */}
@@ -320,15 +364,17 @@ export default function App() {
         onOpenBlock={(block) => {
           setModalTargetTile({ x: block.x, y: block.y });
           setEditingBlock(block);
+          setPendingPinCoords(block.pinX !== undefined ? { x: block.pinX, y: block.pinY! } : null);
           setShowBlockModal(true);
         }}
       />
 
       {/* Minimap Popup Overlay */}
-      {showMinimap && (
+      {showMinimap && activeWorld && (
         <div className="fixed top-20 right-4 z-40">
           <Minimap
             worldId={activeWorld.id}
+            activeWorld={activeWorld}
             playerPosition={playerPosition}
             blocks={blocks.filter((b) => b.worldId === activeWorld.id)}
             themeColor={activeWorld.themeColor}
@@ -354,7 +400,17 @@ export default function App() {
         onToggleMinimap={() => setShowMinimap((prev) => !prev)}
         onOpenBackup={() => setShowBackup(true)}
         onOpenSync={() => setShowSync(true)}
+        onUpdateMapScale={handleUpdateMapScale}
         onPlaceAnchorClick={() => {
+          if (activeWorld?.mapImageUrl) {
+            const dims = pixiApp.getMapDimensions();
+            const curPos = pixiApp.getPlayerController().getPosition();
+            const pinX = Number(((curPos.x / dims.width) * 100).toFixed(2));
+            const pinY = Number(((curPos.y / dims.height) * 100).toFixed(2));
+            setPendingPinCoords({ x: pinX, y: pinY });
+          } else {
+            setPendingPinCoords(null);
+          }
           setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
           setEditingBlock(null);
           setShowBlockModal(true);
@@ -371,10 +427,16 @@ export default function App() {
           worldId={activeWorld.id}
           tileX={modalTargetTile.x}
           tileY={modalTargetTile.y}
+          pinX={pendingPinCoords?.x}
+          pinY={pendingPinCoords?.y}
           existingBlock={editingBlock}
           onSave={handleSaveBlock}
           onDelete={handleDeleteBlock}
-          onCancel={() => setShowBlockModal(false)}
+          onCancel={() => {
+            setShowBlockModal(false);
+            setEditingBlock(null);
+            setPendingPinCoords(null);
+          }}
         />
       )}
 
