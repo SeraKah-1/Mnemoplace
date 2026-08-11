@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { MemoryBlock, PixelDoodle } from "../domain/types";
+import { MemoryBlock, PixelDoodle, WorldFolder } from "../domain/types";
 import { pixiApp } from "../engine/PixiApp";
 import { PlayerPosition } from "../engine/PlayerController";
 import { chunkManager } from "../engine/ChunkManager";
@@ -8,6 +8,7 @@ import { getDoodleById } from "../domain/db";
 
 interface ProximityPopupProps {
   worldId: string;
+  activeWorld: WorldFolder;
   playerPosition: PlayerPosition;
   allBlocks: MemoryBlock[];
   studyMode: boolean; // Explore (Cue) vs Study (Reveal) Mode
@@ -16,6 +17,7 @@ interface ProximityPopupProps {
 
 export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   worldId,
+  activeWorld,
   playerPosition,
   allBlocks,
   studyMode,
@@ -47,16 +49,12 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setDragOffset({ x: 0, y: 0 });
   }, [activeBlock?.id]);
 
-  // Dynamic scale-aware Hysteresis threshold logic
+  // Hysteresis threshold logic: active < 80px (~2.5 tiles), inactive > 120px (~3.5 tiles)
   useEffect(() => {
     let closest: MemoryBlock | null = null;
     let minDistance = Infinity;
     const dims = pixiApp.getMapDimensions();
-
-    // Scale activation radius dynamically with map scale multiplier
-    const scaleFactor = Math.max(1, (dims.scale || 2.0) * 0.75);
-    const activateThreshold = 80 * scaleFactor;
-    const deactivateThreshold = activateThreshold * 1.4;
+    const isImageMap = Boolean(activeWorld.mapImageUrl);
 
     for (const b of allBlocks) {
       if (b.worldId !== worldId) continue;
@@ -64,10 +62,12 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
       let bPxX: number;
       let bPxY: number;
 
-      if (b.pinX !== undefined && b.pinY !== undefined) {
+      if (isImageMap && b.pinX !== undefined && b.pinY !== undefined) {
+        // Custom Image Spatial Pin calculation
         bPxX = (b.pinX / 100) * dims.width;
         bPxY = (b.pinY / 100) * dims.height;
       } else {
+        // 2D Tile Grid Tile calculation
         bPxX = b.x * 32 + 16;
         bPxY = b.y * 32 + 16;
       }
@@ -81,21 +81,26 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     }
 
     if (activeBlock) {
-      let activePxX = activeBlock.pinX !== undefined ? (activeBlock.pinX / 100) * dims.width : activeBlock.x * 32 + 16;
-      let activePxY = activeBlock.pinY !== undefined ? (activeBlock.pinY / 100) * dims.height : activeBlock.y * 32 + 16;
+      let activePxX = (isImageMap && activeBlock.pinX !== undefined && activeBlock.pinY !== undefined)
+        ? (activeBlock.pinX / 100) * dims.width
+        : activeBlock.x * 32 + 16;
+      let activePxY = (isImageMap && activeBlock.pinX !== undefined && activeBlock.pinY !== undefined)
+        ? (activeBlock.pinY / 100) * dims.height
+        : activeBlock.y * 32 + 16;
+
       const currentDist = Math.hypot(playerPosition.x - activePxX, playerPosition.y - activePxY);
 
-      if (currentDist > deactivateThreshold) {
+      if (currentDist > 120) {
         setActiveBlock(null);
         setIsRevealed(false);
       }
     } else {
-      if (closest && minDistance <= activateThreshold) {
+      if (closest && minDistance <= 80) {
         setActiveBlock(closest);
         setIsRevealed(false);
       }
     }
-  }, [playerPosition, allBlocks, worldId, activeBlock]);
+  }, [playerPosition, allBlocks, worldId, activeBlock, activeWorld]);
 
   // Load doodle when active block changes
   useEffect(() => {
@@ -309,17 +314,12 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
             </div>
 
             <div className="relative z-10 flex items-start gap-2.5">
-              {/* Hand-drawn Pixel Doodle Cue or Visual Icon Badge */}
-              <div className="w-11 h-11 rounded bg-slate-950 border-2 border-amber-500/40 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md">
-                {doodle ? (
+              {/* Hand-drawn Pixel Doodle Cue */}
+              {doodle && (
+                <div className="w-11 h-11 rounded bg-slate-950 border-2 border-slate-700 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md">
                   <DoodleCanvasPreview doodle={doodle} />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-950/60 rounded">
-                    <MapPin className="w-4 h-4 text-amber-400 animate-pulse" />
-                    <span className="text-[7px] font-pixel text-cyan-300 font-bold">CUE</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="min-w-0 flex-1">
                 <div className="flex justify-between items-center gap-1">

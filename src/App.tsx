@@ -358,6 +358,7 @@ export default function App() {
       {/* Proximity Cue Overlay (Explore vs Study Mode) */}
       <ProximityPopup
         worldId={activeWorld.id}
+        activeWorld={activeWorld}
         playerPosition={playerPosition}
         allBlocks={blocks}
         studyMode={studyMode}
