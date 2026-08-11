@@ -47,11 +47,16 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
     setDragOffset({ x: 0, y: 0 });
   }, [activeBlock?.id]);
 
-  // Hysteresis threshold logic: active < 80px (~2.5 tiles), inactive > 120px (~3.5 tiles)
+  // Dynamic scale-aware Hysteresis threshold logic
   useEffect(() => {
     let closest: MemoryBlock | null = null;
     let minDistance = Infinity;
     const dims = pixiApp.getMapDimensions();
+
+    // Scale activation radius dynamically with map scale multiplier
+    const scaleFactor = Math.max(1, (dims.scale || 2.0) * 0.75);
+    const activateThreshold = 80 * scaleFactor;
+    const deactivateThreshold = activateThreshold * 1.4;
 
     for (const b of allBlocks) {
       if (b.worldId !== worldId) continue;
@@ -80,12 +85,12 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
       let activePxY = activeBlock.pinY !== undefined ? (activeBlock.pinY / 100) * dims.height : activeBlock.y * 32 + 16;
       const currentDist = Math.hypot(playerPosition.x - activePxX, playerPosition.y - activePxY);
 
-      if (currentDist > 120) {
+      if (currentDist > deactivateThreshold) {
         setActiveBlock(null);
         setIsRevealed(false);
       }
     } else {
-      if (closest && minDistance <= 80) {
+      if (closest && minDistance <= activateThreshold) {
         setActiveBlock(closest);
         setIsRevealed(false);
       }
@@ -304,12 +309,17 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
             </div>
 
             <div className="relative z-10 flex items-start gap-2.5">
-              {/* Hand-drawn Pixel Doodle Cue */}
-              {doodle && (
-                <div className="w-11 h-11 rounded bg-slate-950 border-2 border-slate-700 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md">
+              {/* Hand-drawn Pixel Doodle Cue or Visual Icon Badge */}
+              <div className="w-11 h-11 rounded bg-slate-950 border-2 border-amber-500/40 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md">
+                {doodle ? (
                   <DoodleCanvasPreview doodle={doodle} />
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-indigo-950/60 rounded">
+                    <MapPin className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <span className="text-[7px] font-pixel text-cyan-300 font-bold">CUE</span>
+                  </div>
+                )}
+              </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex justify-between items-center gap-1">
