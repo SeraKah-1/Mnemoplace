@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { DEFAULT_PALETTE } from "../engine/constants";
 import { PixelDoodle } from "../domain/types";
-import { Undo2, Redo2, Paintbrush, Eraser, PaintBucket, Pipette, Check, X } from "lucide-react";
+import { ColorWheelPicker } from "./ColorWheelPicker";
+import { Undo2, Redo2, Paintbrush, Eraser, PaintBucket, Pipette, Check, X, Palette } from "lucide-react";
 
 interface PixelEditorProps {
   initialDoodle?: PixelDoodle | null;
@@ -15,6 +16,7 @@ export const PixelEditor: React.FC<PixelEditorProps> = ({ initialDoodle, onSave,
   const [selectedColorIdx, setSelectedColorIdx] = useState<number>(3); // Default Red
   const [tool, setTool] = useState<"pencil" | "eraser" | "fill" | "picker">("pencil");
   const [customHex, setCustomHex] = useState<string>("#3b82f6");
+  const [showColorWheel, setShowColorWheel] = useState<boolean>(false);
 
   // Grid pixel state (store color index per pixel)
   const [pixels, setPixels] = useState<Uint8Array>(() => {
@@ -357,9 +359,21 @@ export const PixelEditor: React.FC<PixelEditorProps> = ({ initialDoodle, onSave,
           </div>
         </div>
 
-        {/* Palette Bar */}
+        {/* Palette Bar with Circular Color Wheel Toggle */}
         <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">Color Palette</label>
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold flex items-center gap-1">
+              <Palette className="w-3.5 h-3.5 text-amber-400" /> Color Palette
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowColorWheel(!showColorWheel)}
+              className="text-[10px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+            >
+              {showColorWheel ? "Hide Color Wheel" : "Circular RGB Color Wheel 🎨"}
+            </button>
+          </div>
+
           <div className="flex flex-wrap gap-1.5 p-2 bg-zinc-950 rounded-xl border border-zinc-800">
             {palette.map((color, idx) => (
               <button
@@ -393,9 +407,26 @@ export const PixelEditor: React.FC<PixelEditorProps> = ({ initialDoodle, onSave,
               onClick={addCustomColorToPalette}
               className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 rounded-lg border border-zinc-700 flex items-center gap-1"
             >
-              Add Color to Palette
+              Add Color to Swatches
             </button>
           </div>
+
+          {/* Interactive Circular HSL/RGB Color Wheel Picker */}
+          {showColorWheel && (
+            <div className="mt-3 flex justify-center animate-fade-in">
+              <ColorWheelPicker
+                color={customHex}
+                onChange={(hex) => {
+                  setCustomHex(hex);
+                  if (selectedColorIdx > 0) {
+                    const newPalette = [...palette];
+                    newPalette[selectedColorIdx] = hex;
+                    setPalette(newPalette);
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Actions */}
