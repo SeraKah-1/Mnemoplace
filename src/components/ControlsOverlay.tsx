@@ -11,8 +11,9 @@ import {
   Trash2,
   Plus,
   Sparkles,
+  Check,
 } from "lucide-react";
-import { WorldFolder } from "../domain/types";
+import { WorldFolder, MemoryBlock } from "../domain/types";
 
 interface ControlsOverlayProps {
   activeWorld: WorldFolder;
@@ -20,6 +21,7 @@ interface ControlsOverlayProps {
   studyMode: boolean;
   buildMode: boolean;
   selectedTileType: number;
+  holdingBlock?: MemoryBlock | null;
   onToggleBuildMode: () => void;
   onSelectTileType: (type: number) => void;
   onToggleStudyMode: () => void;
@@ -33,6 +35,8 @@ interface ControlsOverlayProps {
   onVirtualDirection: (vx: number, vy: number) => void;
   onOpenSync?: () => void;
   onUpdateMapScale?: (scale: number) => void;
+  onDropHoldingBlock?: () => void;
+  onCancelHoldingBlock?: () => void;
 }
 
 export const TILE_BLOCK_TYPES = [
@@ -147,11 +151,46 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
   onVirtualDirection,
   onOpenSync,
   onUpdateMapScale,
+  holdingBlock,
+  onDropHoldingBlock,
+  onCancelHoldingBlock,
 }) => {
   const [showHotbar, setShowHotbar] = useState(false);
 
   return (
     <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-between">
+
+      {/* ───── HOLDING ANCHOR BANNER (Top Center) ───────────────── */}
+      {holdingBlock && (
+        <div className="pointer-events-auto fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="jrpg-box-gold px-4 py-2 flex items-center gap-3 shadow-2xl border-2 border-amber-400">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+              <span className="text-xs font-pixel font-bold text-amber-300 truncate max-w-[160px]">
+                HOLDING: <span className="text-white font-sans font-bold">{holdingBlock.title}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={onDropHoldingBlock}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-pixel font-bold rounded shadow active:scale-95 transition-transform flex items-center gap-1"
+                title="Drop Anchor Here (E / Space)"
+              >
+                <Check className="w-3.5 h-3.5" /> PLACE HERE (E)
+              </button>
+              {onCancelHoldingBlock && (
+                <button
+                  onClick={onCancelHoldingBlock}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-pixel rounded shadow"
+                  title="Cancel Move (Esc)"
+                >
+                  CANCEL
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── TOP HEADER HUD ─────────────────────────────────────────── */}
       <div className="pointer-events-auto flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 jrpg-box p-2 mx-0 shadow-2xl overflow-x-auto max-w-full">
@@ -440,15 +479,15 @@ export const ControlsOverlay: React.FC<ControlsOverlayProps> = ({
               />
             </div>
 
-            {/* B — right: DELETE */}
+            {/* B — right: DELETE / ERASE */}
             <div className="absolute right-0 top-1/2 -translate-y-1/2">
               <FaceBtn
-                label="DELETE"
+                label={buildMode ? "ERASE" : "DELETE"}
                 icon={<Trash2 className="w-4 h-4" />}
                 color="border-rose-400 text-rose-300"
                 bgColor="bg-rose-900"
                 onClick={onDeleteAtPlayer}
-                title="Delete block (DEL)"
+                title={buildMode ? "Erase Tile / Wall (DEL)" : "Delete block (DEL)"}
               />
             </div>
 

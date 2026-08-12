@@ -165,7 +165,96 @@ export default function App() {
     setWorlds(allWorlds);
   };
 
-  // Global Hotkey listeners (E/Space = Place, Delete/X = Delete, F = Elevator)
+  // Moveable Anchor state & helpers
+  const [holdingBlock, setHoldingBlock] = useState<MemoryBlock | null>(null);
+
+  const holdingBlockRef = useRef(holdingBlock);
+  useEffect(() => {
+    holdingBlockRef.current = holdingBlock;
+    pixiApp.setHoldingBlock(holdingBlock);
+  }, [holdingBlock]);
+
+  const handleDropHoldingBlock = async () => {
+    const curBlock = holdingBlockRef.current || holdingBlock;
+    const curWorld = activeWorldRef.current || activeWorld;
+    if (!curBlock || !curWorld) return;
+
+    let updatedBlock: MemoryBlock;
+    if (curWorld.mapImageUrl) {
+      const dims = pixiApp.getMapDimensions();
+      const curPos = pixiApp.getPlayerController().getPosition();
+      const pinX = Number(((curPos.x / dims.width) * 100).toFixed(2));
+      const pinY = Number(((curPos.y / dims.height) * 100).toFixed(2));
+      updatedBlock = {
+        ...curBlock,
+        worldId: curWorld.id,
+        x: playerPosition.tileX,
+        y: playerPosition.tileY,
+        pinX,
+        pinY,
+        updatedAt: Date.now(),
+      };
+    } else {
+      updatedBlock = {
+        ...curBlock,
+        worldId: curWorld.id,
+        x: playerPosition.tileX,
+        y: playerPosition.tileY,
+        pinX: undefined,
+        pinY: undefined,
+        updatedAt: Date.now(),
+      };
+    }
+
+    await saveBlock(updatedBlock);
+    await pixiApp.refreshWorld(true);
+    const updatedAll = await getAllBlocks();
+    setBlocks(updatedAll);
+    setHoldingBlock(null);
+  };
+
+  const handleLiftNearestBlock = (target?: MemoryBlock) => {
+    if (target) {
+      setHoldingBlock(target);
+      return;
+    }
+
+    const curWorld = activeWorldRef.current || activeWorld;
+    if (!curWorld) return;
+
+    const dims = pixiApp.getMapDimensions();
+    const curPos = pixiApp.getPlayerController().getPosition();
+    const isImageMap = Boolean(curWorld.mapImageUrl);
+
+    let nearest: MemoryBlock | null = null;
+    let minDistance = Infinity;
+
+    for (const b of blocks) {
+      if (b.worldId !== curWorld.id) continue;
+      let bPxX = (isImageMap && b.pinX !== undefined && b.pinY !== undefined)
+        ? (b.pinX / 100) * dims.width
+        : b.x * 16 + 8;
+      let bPxY = (isImageMap && b.pinX !== undefined && b.pinY !== undefined)
+        ? (b.pinY / 100) * dims.height
+        : b.y * 16 + 8;
+
+      const dist = Math.hypot(curPos.x - bPxX, curPos.y - bPxY);
+      if (dist <= 64 && dist < minDistance) {
+        minDistance = dist;
+        nearest = b;
+      }
+    }
+
+    if (nearest) {
+      setHoldingBlock(nearest);
+    }
+  };
+
+  const handleCancelHoldingBlock = () => {
+    setHoldingBlock(null);
+  };
+
+  // Keyboard shortcut handlers
   useEffect(() => {
     const handleGlobalKeyDown = async (e: KeyboardEvent) => {
       if (isAnyModalOpen) return;
@@ -176,7 +265,10 @@ export default function App() {
 
       if (e.code === "KeyE" || (e.code === "Space" && !e.repeat)) {
         e.preventDefault();
-        if (buildModeRef.current) {
+        if (holdingBlockRef.current) {
+          // HOLDING BLOCK ACTIVE: Place anchor pin at current location
+          await handleDropHoldingBlock();
+        } else if (buildModeRef.current) {
           // BUILD MODE ACTIVE: Paint selected block tile at player position
           if (activeWorld) {
             await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, selectedTileTypeRef.current);
@@ -199,6 +291,14 @@ export default function App() {
           setModalTargetTile({ x: playerPosition.tileX, y: playerPosition.tileY });
           setEditingBlock(existing || null);
           setShowBlockModal(true);
+        }
+      } else if (e.code === "KeyG") {
+        e.preventDefault();
+        handleLiftNearestBlock();
+      } else if (e.code === "Escape") {
+        if (holdingBlockRef.current) {
+          e.preventDefault();
+          handleCancelHoldingBlock();
         }
       } else if (
         e.code === "Delete" ||
@@ -362,6 +462,7 @@ export default function App() {
         playerPosition={playerPosition}
         allBlocks={blocks}
         studyMode={studyMode}
+        onLiftBlock={handleLiftNearestBlock}
         onOpenBlock={(block) => {
           setModalTargetTile({ x: block.x, y: block.y });
           setEditingBlock(block);
@@ -392,6 +493,9 @@ export default function App() {
         studyMode={studyMode}
         buildMode={buildMode}
         selectedTileType={selectedTileType}
+        holdingBlock={holdingBlock}
+        onDropHoldingBlock={handleDropHoldingBlock}
+        onCancelHoldingBlock={handleCancelHoldingBlock}
         onToggleBuildMode={() => setBuildMode((prev) => !prev)}
         onSelectTileType={(t) => setSelectedTileType(t)}
         onToggleStudyMode={() => setStudyMode((prev) => !prev)}
@@ -403,6 +507,10 @@ export default function App() {
         onOpenSync={() => setShowSync(true)}
         onUpdateMapScale={handleUpdateMapScale}
         onPlaceAnchorClick={async () => {
+          if (holdingBlock) {
+            await handleDropHoldingBlock();
+            return;
+          }
           if (buildMode && activeWorld) {
             await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, selectedTileType);
             return;

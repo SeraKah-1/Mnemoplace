@@ -13,6 +13,7 @@ interface ProximityPopupProps {
   allBlocks: MemoryBlock[];
   studyMode: boolean; // Explore (Cue) vs Study (Reveal) Mode
   onOpenBlock: (block: MemoryBlock) => void;
+  onLiftBlock?: (block: MemoryBlock) => void;
 }
 
 export const ProximityPopup: React.FC<ProximityPopupProps> = ({
@@ -22,6 +23,7 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
   allBlocks,
   studyMode,
   onOpenBlock,
+  onLiftBlock,
 }) => {
   const [activeBlock, setActiveBlock] = useState<MemoryBlock | null>(null);
   const [doodle, setDoodle] = useState<PixelDoodle | null>(null);
@@ -371,10 +373,25 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
             </div>
 
             <div className="relative z-10 flex justify-between items-center text-[8px] font-pixel text-slate-400 border-t-2 border-slate-800/80 pt-1">
-              <span className="flex items-center gap-1 text-cyan-300">
-                <Eye className="w-3 h-3 text-cyan-400" />
-                TAP TO INSPECT
-              </span>
+              {onLiftBlock ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLiftBlock(activeBlock);
+                  }}
+                  className="flex items-center gap-1 text-amber-300 hover:text-amber-200 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/60 font-bold active:scale-95 transition-transform"
+                  title="Lift and Move Anchor Pin (G)"
+                >
+                  <GripHorizontal className="w-3 h-3 text-amber-400" />
+                  MOVE (G)
+                </button>
+              ) : (
+                <span className="flex items-center gap-1 text-cyan-300">
+                  <Eye className="w-3 h-3 text-cyan-400" />
+                  TAP TO INSPECT
+                </span>
+              )}
               <span className="text-slate-400 font-mono">DUE: {new Date(activeBlock.srs.due).toLocaleDateString()}</span>
             </div>
           </div>

@@ -424,8 +424,39 @@ export class PixiApp {
     this.worldContainer.x = Math.round(screenCenterX - playerPos.x);
     this.worldContainer.y = Math.round(screenCenterY - playerPos.y);
 
+    if (this.holdingGhostSprite && this.holdingBlock && this.playerSprite) {
+      this.holdingGhostSprite.x = this.playerSprite.x;
+      this.holdingGhostSprite.y = this.playerSprite.y - 14;
+    }
+
     if (moved) {
       this.refreshWorld();
+    }
+  }
+
+  private holdingGhostSprite: Sprite | null = null;
+  private holdingBlock: MemoryBlock | null = null;
+
+  public setHoldingBlock(block: MemoryBlock | null) {
+    this.holdingBlock = block;
+    if (!block) {
+      if (this.holdingGhostSprite) {
+        this.holdingGhostSprite.visible = false;
+      }
+      return;
+    }
+
+    if (!this.holdingGhostSprite && this.playerLayer) {
+      const tex = getBlockPillarTexture(Boolean(block.doodleId));
+      this.holdingGhostSprite = new Sprite(tex);
+      this.holdingGhostSprite.width = 16;
+      this.holdingGhostSprite.height = 16;
+      this.holdingGhostSprite.alpha = 0.85;
+      this.playerLayer.addChild(this.holdingGhostSprite);
+    }
+
+    if (this.holdingGhostSprite) {
+      this.holdingGhostSprite.visible = true;
     }
   }
 
