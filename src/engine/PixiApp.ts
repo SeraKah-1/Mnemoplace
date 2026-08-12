@@ -238,13 +238,12 @@ export class PixiApp {
         mapSprite.width = this.mapWidth;
         mapSprite.height = this.mapHeight;
         this.tileLayer.addChild(mapSprite);
-        return;
       } catch (err) {
         console.warn("Failed to load mapImageUrl in Pixi, falling back to tile grid:", err);
       }
     }
 
-    // Fallback: 2D Tile Grid Rendering
+    // Render 2D Tile Grid & Painted Tile Overlays
     const loadedChunks = chunkManager.getLoadedChunks();
     for (const chunk of loadedChunks) {
       const chunkBaseX = chunk.cx * CHUNK_SIZE * TILE_SIZE;
@@ -254,8 +253,11 @@ export class PixiApp {
         for (let c = 0; c < CHUNK_SIZE; c++) {
           const tileIdx = r * CHUNK_SIZE + c;
           const tileType = chunk.tiles[tileIdx] || 0;
-          const tex = getTileTexture(tileType, this.currentThemeColor);
 
+          // If on custom image map, only render non-zero painted tiles over image
+          if (this.currentMapImageUrl && tileType === 0) continue;
+
+          const tex = getTileTexture(tileType, this.currentThemeColor);
           const sprite = new Sprite(tex);
           sprite.x = chunkBaseX + c * TILE_SIZE;
           sprite.y = chunkBaseY + r * TILE_SIZE;

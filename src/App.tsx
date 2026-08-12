@@ -513,6 +513,7 @@ export default function App() {
           }
           if (buildMode && activeWorld) {
             await chunkManager.setTileAt(activeWorld.id, playerPosition.tileX, playerPosition.tileY, selectedTileType);
+            await pixiApp.refreshWorld(true);
             return;
           }
           if (activeWorld?.mapImageUrl) {
