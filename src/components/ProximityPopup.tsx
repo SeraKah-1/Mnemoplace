@@ -80,6 +80,9 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
       }
     }
 
+    const triggerThreshold = isImageMap ? 45 : 32; // ~1-1.5 tiles (32px radius)
+    const exitThreshold = isImageMap ? 65 : 48;    // ~2 tiles (48px radius)
+
     if (activeBlock) {
       let activePxX = (isImageMap && activeBlock.pinX !== undefined && activeBlock.pinY !== undefined)
         ? (activeBlock.pinX / 100) * dims.width
@@ -90,12 +93,12 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
 
       const currentDist = Math.hypot(playerPosition.x - activePxX, playerPosition.y - activePxY);
 
-      if (currentDist > 120) {
+      if (currentDist > exitThreshold) {
         setActiveBlock(null);
         setIsRevealed(false);
       }
     } else {
-      if (closest && minDistance <= 80) {
+      if (closest && minDistance <= triggerThreshold) {
         setActiveBlock(closest);
         setIsRevealed(false);
       }
@@ -350,7 +353,9 @@ export const ProximityPopup: React.FC<ProximityPopupProps> = ({
             {/* Content Section (Desirable Difficulties Active Retrieval Cue vs Answer) */}
             <div className="relative z-10 border-t-2 border-slate-800 pt-2 mt-0.5 text-xs">
               {showContent ? (
-                <p className="text-slate-200 text-[10px] sm:text-[11px] leading-relaxed whitespace-pre-wrap line-clamp-4">{activeBlock.text}</p>
+                <div className="text-slate-200 text-[10px] sm:text-[11px] leading-relaxed whitespace-pre-wrap max-h-[220px] overflow-y-auto pr-1">
+                  {activeBlock.text}
+                </div>
               ) : (
                 <div
                   onClick={(e) => {

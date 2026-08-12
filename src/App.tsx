@@ -335,7 +335,7 @@ export default function App() {
     setShowMinimap(false);
   };
 
-  const dueBlocksCount = blocks.filter((b) => b.srs.due <= Date.now()).length;
+  const dueBlocksCount = blocks.filter((b) => b.worldId === activeWorld?.id && b.srs.due <= Date.now()).length;
 
   return (
     <div className="w-full h-screen bg-zinc-950 text-zinc-100 overflow-hidden relative select-none">
@@ -458,6 +458,8 @@ export default function App() {
       {showReview && (
         <ReviewModal
           blocks={blocks}
+          activeWorldId={activeWorld.id}
+          activeWorldName={activeWorld.name}
           onUpdateBlock={async () => {
             const updated = await getAllBlocks();
             setBlocks(updated);
